@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Mediensteuerung — Update-Pfad (Deps-Only)</title>
+<style>
+:root {
+  --bg: #0f1419;
+  --panel: #1a1f2e;
+  --panel-soft: #232a3d;
+  --border: #2d3548;
+  --text: #d4dae5;
+  --text-muted: #8b94a8;
+  --text-dim: #6b7387;
+  --accent: #5fa8d3;
+
+  --safe: #66dd99;
+  --safe-bg: #1f2d28;
+  --caution: #ffd866;
+  --caution-bg: #3a3318;
+  --risky: #ffaa44;
+  --risky-bg: #3a2a18;
+  --blocked: #ff5555;
+  --blocked-bg: #3a1818;
+  --skip: #6b7387;
+
+  --code-bg: #0a0d14;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0; padding: 0;
+  line-height: 1.55;
+  font-size: 14px;
+}
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 32px;
+}
+header {
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+}
+h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 600; }
+.subtitle { color: var(--text-muted); font-size: 14px; margin: 4px 0; }
+.meta { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 12px; color: var(--text-dim); font-size: 13px; }
+.meta strong { color: var(--text); font-weight: 500; }
+
+h2 {
+  font-size: 22px;
+  margin: 48px 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--accent);
+  font-weight: 600;
+}
+h3 {
+  font-size: 17px;
+  margin: 28px 0 12px 0;
+  font-weight: 600;
+}
+h4 {
+  font-size: 13px;
+  margin: 16px 0 8px 0;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.toc {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 32px;
+}
+.toc h3 { margin-top: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
+.toc ul { list-style: none; padding: 0; margin: 0; }
+.toc li { padding: 4px 0; }
+.toc a { color: var(--accent); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+.note {
+  background: var(--panel-soft);
+  border-left: 3px solid var(--accent);
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 0 6px 6px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.note.warning { border-left-color: var(--blocked); }
+.note.caution { border-left-color: var(--caution); }
+.note strong { color: var(--text); }
+
+.legend {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px 0 24px;
+}
+.legend h4 { margin-top: 0; }
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px 24px;
+}
+.legend-item { display: flex; align-items: flex-start; gap: 10px; }
+.legend-item .badge { flex-shrink: 0; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge.safe { background: var(--safe-bg); color: var(--safe); border: 1px solid var(--safe); }
+.badge.caution { background: var(--caution-bg); color: var(--caution); border: 1px solid var(--caution); }
+.badge.risky { background: var(--risky-bg); color: var(--risky); border: 1px solid var(--risky); }
+.badge.blocked { background: var(--blocked-bg); color: var(--blocked); border: 1px solid var(--blocked); }
+.badge.skip { background: var(--panel-soft); color: var(--skip); border: 1px solid var(--border); }
+
+.phase {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 24px 0;
+  overflow: hidden;
+}
+.phase-header {
+  padding: 16px 20px;
+  background: var(--panel-soft);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.phase-header h3 { margin: 0; font-size: 18px; }
+.phase-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: "SF Mono", Consolas, monospace;
+}
+.phase-body { padding: 20px 24px; }
+.phase-body p { margin: 8px 0; color: var(--text-muted); }
+.phase-body p strong { color: var(--text); }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 16px;
+  font-size: 13px;
+}
+th {
+  text-align: left;
+  padding: 8px 10px;
+  background: var(--panel-soft);
+  border-bottom: 2px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tr:hover td { background: rgba(95, 168, 211, 0.04); }
+td.pkg { font-family: "SF Mono", Consolas, monospace; font-weight: 600; color: var(--accent); }
+td.ver { font-family: "SF Mono", Consolas, monospace; color: var(--text-muted); }
+td.ver.from { color: var(--blocked); }
+td.ver.to { color: var(--safe); }
+td.svc { font-size: 12px; color: var(--text-muted); }
+
+code, .mono {
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--text);
+  margin: 12px 0;
+}
+
+ol.steps {
+  padding-left: 24px;
+  margin: 12px 0;
+}
+ol.steps li {
+  padding: 4px 0;
+  margin: 2px 0;
+}
+ol.steps li code { font-size: 12px; }
+
+footer {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Mediensteuerung — Update-Pfad (Deps-Only)</h1>
+  <p class="subtitle">Reine Abhängigkeits-Upgrades · minimaler Code-Touch · risikosortiert</p>
+  <div class="meta">
+    <span>📅 Stand: <strong>2026-05-27</strong></span>
+    <span>🌿 Branch: <code>review/staged-audit-2026-05</code></span>
+    <span>🎯 Ziel: <strong>CVE/EOL-Risiken eliminieren ohne Code-Refactor</strong></span>
+  </div>
+</header>
+
+<div class="note">
+<strong>Scope.</strong> Nur Dependency-Bumps die <em>ohne</em> oder mit <em>minimalen</em> Code-Änderungen funktionieren. Major-Migrations (Pydantic v1→v2, aiomqtt 1→2, FastAPI 0.95→0.110+, fastapi-users 11→13) sind als <span class="badge blocked">BLOCKED</span> markiert und brauchen einen separaten Refactor-Track.
+</div>
+
+<div class="legend">
+  <h4>Risiko-Klassifizierung</h4>
+  <div class="legend-grid">
+    <div class="legend-item">
+      <span class="badge safe">SAFE</span>
+      <span>Drop-in. Nur Versions-Pin ändern, Container rebuilden. Patch-Level oder konservativer Minor-Bump.</span>
+    </div>
+    <div class="legend-item">
+      <span class="badge caution">CAUTION</span>
+      <span>Minor-Version-Bump mit Backward-Compatibility-Garantie, aber Re-Test pflicht. Selten unsichtbare Verhaltens-Änderungen.</span>
+    </div>
+    <div class="legend-item">
+      <span class="badge risky">RISKY</span>
+      <span>Major-Bump <em>ohne</em> bekannte Breaking-Changes für unseren Use-Case — aber Code-Audit + manueller End-to-End-Test nötig.</span>
+    </div>
+    <div class="legend-item">
+      <span class="badge blocked">BLOCKED</span>
+      <span>Major-Bump mit bekannten Breaking-Changes. Code-Refactor nötig. Nicht Teil dieses Update-Pfads. Separat planen.</span>
+    </div>
+    <div class="legend-item">
+      <span class="badge skip">DROP</span>
+      <span>Package <em>entfernen</em> statt updaten. Dead Dependency.</span>
+    </div>
+  </div>
+</div>
+
+<div class="toc">
+  <h3>Phasen</h3>
+  <ul>
+    <li><a href="#prep">0 — Vorbereitung</a></li>
+    <li><a href="#phase-1">1 — Trivial-Safe (Patch-Bumps + Dead-Code-Removal)</a></li>
+    <li><a href="#phase-2">2 — Library-Minor-Bumps mit CVE-Fix</a></li>
+    <li><a href="#phase-3">3 — Container-Image-Updates</a></li>
+    <li><a href="#phase-4">4 — Major-Bumps ohne Code-Impact</a></li>
+    <li><a href="#phase-5">5 — Python-Service-Versionen</a></li>
+    <li><a href="#phase-6">6 — Manager-Spezial (anyio/uvloop)</a></li>
+    <li><a href="#phase-7">7 — Probe-Service (separates Repo)</a></li>
+    <li><a href="#blocked-section">Blocked — separater Refactor-Track</a></li>
+    <li><a href="#workflow">Test/Rollback-Workflow</a></li>
+  </ul>
+</div>
+
+<!-- ============================================ -->
+<section id="prep">
+<h2>Phase 0 — Vorbereitung</h2>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>Snapshot + Test-Baseline</h3>
+  <span class="phase-summary">vor jedem Phase-Step ausführen</span>
+</div>
+<div class="phase-body">
+
+<ol class="steps">
+<li>Branch <code>updates/dependencies-only-2026-05</code> aus <code>main</code> erstellen.</li>
+<li>MongoDB-Snapshot (Bind-Volume <code>./backend/db/mongo-volume</code> mit gestopptem mongod nach tar packen).</li>
+<li>TLS-Material-Snapshot (<code>./backend/mkcert/certs/</code> tar).</li>
+<li><code>docker-compose.yml</code> Version vor Änderungen taggen: <code>git tag pre-update-2026-05</code>.</li>
+<li>Test-Baseline dokumentieren:
+  <ul>
+    <li>Browser-Login + Device-List sichtbar</li>
+    <li>1× Probe online (FQDN ↔ NetBox match)</li>
+    <li>1× Manager → Probe Command (<code>ping</code>) → Response in API-WS</li>
+    <li>1× Calendar-Event in den nächsten 5min sichtbar</li>
+    <li>1× KNX-Switch-Toggle propagiert</li>
+  </ul>
+</li>
+<li>Pro Phase-Step: einzelner Service rebuild + diese 5 Tests.</li>
+</ol>
+
+</div>
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="phase-1">
+<h2>Phase 1 — Trivial-Safe</h2>
+<p style="color: var(--text-muted);">Bumps die garantiert keinen Code-Impact haben (Patch-Level) + Dead-Code-Removal.</p>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>1.1 Dead Dependencies entfernen</h3>
+  <span class="phase-summary">SAFE · 0 Code-Änderungen</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Package</th><th>Aktion</th><th>Grund</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr>
+  <td class="svc">manager</td>
+  <td class="pkg">pymodbus</td>
+  <td>Zeile aus Dockerfile löschen</td>
+  <td>Installed aber nirgends importiert (grep bestätigt)</td>
+  <td><span class="badge safe">SAFE</span></td>
+</tr>
+<tr>
+  <td class="svc">manager</td>
+  <td class="pkg">asyncio-mqtt</td>
+  <td><code>requirements.txt</code> löschen oder Inhalt synchronisieren</td>
+  <td>req.txt pinnt asyncio-mqtt (legacy), Dockerfile installiert aiomqtt — req.txt wird nie verwendet</td>
+  <td><span class="badge safe">SAFE</span></td>
+</tr>
+<tr>
+  <td class="svc">install/</td>
+  <td class="pkg">certs_setup.sh</td>
+  <td>File löschen</td>
+  <td>Byte-identisch mit <code>ssl_setup.sh</code> — nicht referenziert</td>
+  <td><span class="badge safe">SAFE</span></td>
+</tr>
+<tr>
+  <td class="svc">docker-compose.yml</td>
+  <td class="pkg">networks.pubsub</td>
+  <td>Network-Block entfernen</td>
+  <td>Bridge-Network deklariert, kein Service nutzt es</td>
+  <td><span class="badge safe">SAFE</span></td>
+</tr>
+<tr>
+  <td class="svc">docker-compose.yml</td>
+  <td class="pkg">version: '3.8'</td>
+  <td>Zeile entfernen</td>
+  <td>In Compose v2 obsolet, emittiert Warning</td>
+  <td><span class="badge safe">SAFE</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>1.2 Patch-Level Bumps (PyPI)</h3>
+  <span class="phase-summary">SAFE · keine API-Änderungen</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Package</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">manager · calendar · knx</td><td class="pkg">asyncclick</td><td class="ver from">8.1.3.4</td><td class="ver to">8.1.8.x</td><td><span class="badge safe">SAFE</span></td></tr>
+<tr><td class="svc">manager</td><td class="pkg">aiosnmp</td><td class="ver from">0.7.2</td><td class="ver to">0.7.3+</td><td><span class="badge safe">SAFE</span></td></tr>
+<tr><td class="svc">calendar</td><td class="pkg">pytz</td><td class="ver from">2023.3.post1</td><td class="ver to">2025.1+</td><td><span class="badge safe">SAFE</span></td></tr>
+<tr><td class="svc">calendar</td><td class="pkg">python-dateutil</td><td class="ver from">2.8.2</td><td class="ver to">2.9.0.post0</td><td><span class="badge safe">SAFE</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="phase-2">
+<h2>Phase 2 — CVE-Fix Library-Minor-Bumps</h2>
+<p style="color: var(--text-muted);">Höchste Priorität: bekannte CVEs in pinned-Versionen.</p>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>2.1 <code>requests</code> — CVE-2024-35195</h3>
+  <span class="phase-summary">SAFE · 3 Services betroffen</span>
+</div>
+<div class="phase-body">
+<p><strong>CVE-2024-35195:</strong> Session-Cert-Verify-Bypass nach 1st failure. Drop-in-Fix in 2.32.4.</p>
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">manager</td><td class="ver from">2.30.0</td><td class="ver to">2.32.4+</td><td><span class="badge safe">SAFE</span></td></tr>
+<tr><td class="svc">knx</td><td class="ver from">2.30.0</td><td class="ver to">2.32.4+</td><td><span class="badge safe">SAFE</span></td></tr>
+<tr><td class="svc">api (transitiv via fastapi-Stack)</td><td class="ver from">—</td><td class="ver to">via pin</td><td><span class="badge caution">CAUTION</span></td></tr>
+</tbody>
+</table>
+<p>Zusatz: CVE-2023-32681 (Proxy-Authorization-Header-Leak) — bereits in &lt;2.32 gefixt.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>2.2 <code>aiohttp</code> — Multiple CVEs (manager)</h3>
+  <span class="phase-summary">SAFE · 1 Service</span>
+</div>
+<div class="phase-body">
+<p>3.8.5 ist von folgenden CVEs betroffen:</p>
+<ul>
+  <li><strong>CVE-2024-23334</strong> — Path-Traversal in <code>aiohttp.web.FileResponse</code> (manager nutzt FileResponse nicht direkt, aber via Bibliotheken)</li>
+  <li><strong>CVE-2024-30251</strong> — DoS via crafted POST</li>
+  <li><strong>CVE-2024-52303/52304</strong> — middleware bypass</li>
+  <li><strong>CVE-2023-49081/49082</strong> — HTTP-Request-Smuggling</li>
+</ul>
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">manager</td><td class="ver from">3.8.5</td><td class="ver to">3.10.11+</td><td><span class="badge caution">CAUTION</span></td></tr>
+</tbody>
+</table>
+<p>Re-Test: BrightSign-Reboot (HTTP-Path) + Probe-Roundtrip nach Bump.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>2.3 <code>uvloop</code> — Segfault-Fixes (manager)</h3>
+  <span class="phase-summary">SAFE · 1 Service</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">manager</td><td class="ver from">0.17.0</td><td class="ver to">0.21.0+</td><td><span class="badge safe">SAFE</span></td></tr>
+</tbody>
+</table>
+<p>0.21+ fixed mehrere Segfault-Pfade unter Cancel/Shutdown. Drop-in.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>2.4 <code>icmplib</code> — Drift sync</h3>
+  <span class="phase-summary">SAFE</span>
+</div>
+<div class="phase-body">
+<p><code>requirements.txt:6</code> pinnt <code>3.0.3</code>, Dockerfile installiert <code>3.0.4</code>. Beide auf <code>3.0.4+</code> setzen.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="phase-3">
+<h2>Phase 3 — Container-Image-Updates</h2>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>3.1 Mosquitto — CVE-Fix</h3>
+  <span class="phase-summary">SAFE · keine Config-Änderung</span>
+</div>
+<div class="phase-body">
+<p>2.0.18 hat CVE-2024-3935 (heap exec) und CVE-2023-28366 (Memleak via crafted SUBSCRIBE). Aktueller 2.0.x-Patch ist 2.0.20+ (Stand Ende 2024 weiter gepflegt; pre-deploy auf docker hub aktuellsten 2.0.x tag prüfen).</p>
+<table>
+<thead><tr><th>Image</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="pkg">eclipse-mosquitto</td><td class="ver from">2.0.18-openssl</td><td class="ver to">2.0.20+-openssl</td><td><span class="badge safe">SAFE</span></td></tr>
+</tbody>
+</table>
+<p>Wire-Protokoll (MQTT 3.1.1 mTLS) bleibt identisch. mosquitto.conf-Format unverändert.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>3.2 MongoDB — EOL-Fix</h3>
+  <span class="phase-summary">CAUTION · Daten-Migration nötig</span>
+</div>
+<div class="phase-body">
+<p>6.0 EOL Juli 2025. Upgrade-Pfad <strong>nicht überspringbar</strong> — Mongo erlaubt Major-Jumps nur sequenziell.</p>
+<table>
+<thead><tr><th>Image</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="pkg">mongo</td><td class="ver from">6.0.5</td><td class="ver to">6.0.latest</td><td><span class="badge safe">SAFE</span> (Patch-Bump)</td></tr>
+<tr><td class="pkg">mongo</td><td class="ver from">6.0.latest</td><td class="ver to">7.0.x LTS</td><td><span class="badge caution">CAUTION</span></td></tr>
+</tbody>
+</table>
+<h4>Upgrade-Pfad</h4>
+<ol class="steps">
+<li>Stop alle Services (api+manager+calendar) — DB letzte stoppen.</li>
+<li>Snapshot von <code>./backend/db/mongo-volume</code> (tar).</li>
+<li>Image-Bump 6.0.5 → 6.0.latest → start → 5min uptime check → graceful stop.</li>
+<li>Bump 6.0.latest → 7.0.x → start → <code>db.adminCommand({setFeatureCompatibilityVersion:'7.0'})</code>.</li>
+<li>End-to-End-Test (Login, calendar-list, knx-events).</li>
+</ol>
+<p><strong>motor 3.3.1 → 3.6.x:</strong> separater Bump in calendar — siehe <a href="#phase-4">Phase 4</a>.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>3.3 mkcert Build-Image</h3>
+  <span class="phase-summary">SAFE · keine Runtime-Auswirkung</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Image/Source</th><th>Aktion</th></tr></thead>
+<tbody>
+<tr><td class="pkg">FROM alpine</td><td>auf <code>alpine:3.20</code> pinnen (oder <code>alpine:3.21</code> aktuell)</td></tr>
+<tr><td class="pkg">mkcert binary</td><td>SHA256-Verify ergänzen — Binary-Version bleibt 1.4.4 (last release)</td></tr>
+<tr><td class="pkg">tls-gen</td><td><code>--depth=1</code> + Commit-SHA pinnen</td></tr>
+</tbody>
+</table>
+<p>Builds reproduzierbarer — Output unverändert.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="phase-4">
+<h2>Phase 4 — Major-Bumps ohne Code-Impact</h2>
+<p style="color: var(--text-muted);">Major-Versions-Sprünge, deren Breaking-Changes <em>unsere</em> Code-Pfade nicht treffen.</p>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>4.1 <code>xknx</code> 2.x → 3.x</h3>
+  <span class="phase-summary">RISKY · Re-Test KNX/IP Secure Pflicht</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">knx</td><td class="ver from">2.11.2</td><td class="ver to">3.7+</td><td><span class="badge risky">RISKY</span></td></tr>
+</tbody>
+</table>
+<p>3.x bringt KNX/IP-Secure-Fixes. <strong>Public API von <code>xknx.XKNX</code> und <code>xknx.devices.Switch</code> stabil</strong> — unser <code>backend/knx/knx.py</code> nutzt nur diese High-Level-Klassen.</p>
+<p><strong>Brittle Stelle:</strong> <code>switch.switch.group_addr_str().split(',')[0][1:]</code> — internes Format könnte sich ändern. Stage-2h-Audit H13 empfiehlt sowieso <code>switch.switch.group_address</code> direkt. <em>Diese Code-Änderung ist Pflicht beim Bump</em> (4 Zeilen).</p>
+<p><strong>Code-Touch:</strong> 1 File (<code>knx.py</code>), ~4 Zeilen.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>4.2 <code>motor</code> 3.3 → 3.6.x</h3>
+  <span class="phase-summary">SAFE · Drop-in</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">calendar</td><td class="ver from">3.3.1</td><td class="ver to">3.6.x</td><td><span class="badge safe">SAFE</span></td></tr>
+</tbody>
+</table>
+<p>API der <code>AsyncIOMotorClient</code> stabil. Backward-compat zu MongoDB 6+ und 7.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>4.3 <code>pysnmp</code> 4.4.12 → <code>pysnmp-lextudio</code></h3>
+  <span class="phase-summary">RISKY · Drop-in mit Repo-Wechsel</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">fac</td><td class="ver from">pysnmp==4.4.12</td><td class="ver to">pysnmp-lextudio==4.4.12+ <em>oder</em> pysnmp 6.x</td><td><span class="badge risky">RISKY</span></td></tr>
+</tbody>
+</table>
+<p><strong>pysnmp-lextudio</strong> ist offizieller Fork mit pip-Drop-In-Kompatibilität für 4.x. Empfohlener kurzfristiger Pfad.</p>
+<p>Mittelfristig: pysnmp 6.x ist API-rewrite — eigene Major-Migration. Für jetzt: lextudio-Fork.</p>
+<p><strong>Code-Touch:</strong> 0 Zeilen (drop-in).</p>
+<div class="note caution">
+<strong>Achtung:</strong> fac-Service hat zusätzlich einen <em>echten Bug</em> (ENV-Var-Mismatch <code>FAC_COMMUNITYSTRING</code> vs <code>COMMUNITYSTRING</code> + <code>app.join()</code>-Blockade). Dieser Update-Pfad <strong>fixt fac nicht funktional</strong> — siehe <a href="#phase-blocked">Blocked-Track</a>.
+</div>
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="phase-5">
+<h2>Phase 5 — Python-Service-Versionen</h2>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>5.1 Python 3.11 → 3.12 (api/manager/calendar/knx)</h3>
+  <span class="phase-summary">CAUTION · 4 Services</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">api</td><td class="ver from">python:3.11-slim</td><td class="ver to">python:3.12-slim</td><td><span class="badge caution">CAUTION</span></td></tr>
+<tr><td class="svc">manager</td><td class="ver from">python:3.11-slim</td><td class="ver to">python:3.12-slim</td><td><span class="badge caution">CAUTION</span></td></tr>
+<tr><td class="svc">calendar</td><td class="ver from">python:3.11-slim</td><td class="ver to">python:3.12-slim</td><td><span class="badge caution">CAUTION</span></td></tr>
+<tr><td class="svc">knx</td><td class="ver from">python:3.11-slim</td><td class="ver to">python:3.12-slim</td><td><span class="badge caution">CAUTION</span></td></tr>
+</tbody>
+</table>
+<p><strong>Bekannte 3.11 → 3.12 Stolperfallen:</strong></p>
+<ul>
+  <li><code>asyncio.get_event_loop()</code> raises wenn kein running-Loop — manager <code>app.py:25</code>, api <code>routes/base.py:32</code>, calendar <code>app.py:19</code>. <em>Wahrscheinlich bereits broken in 3.11 mit DeprecationWarning</em>. Bump kann es zu Hard-Error machen.</li>
+  <li><code>distutils</code> entfernt — Dependencies prüfen die noch nutzen (keine in unserem Stack identifiziert).</li>
+  <li>pytz: subtle changes — calendar prüfen.</li>
+</ul>
+<p><strong>Code-Touch wenn nötig:</strong> <code>get_event_loop()</code> → <code>get_running_loop()</code> in 3 Files (3 Stellen). Trivial-Patch. Oder Pin auf 3.11.latest (3.11.10+) belassen, falls Refactor-Aufwand vermieden werden soll.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>5.2 Python 3.7 → 3.11 (fac)</h3>
+  <span class="phase-summary">CAUTION · isolierter Service</span>
+</div>
+<div class="phase-body">
+<p>3.7 EOL Juni 2023 — <strong>3 Jahre keine Security-Patches</strong>. Höchste Update-Priorität.</p>
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">fac</td><td class="ver from">python:3.7.17-slim</td><td class="ver to">python:3.11-slim (oder 3.12)</td><td><span class="badge caution">CAUTION</span></td></tr>
+</tbody>
+</table>
+<p>fac-Code ist 78 Zeilen — Surface gering. Hauptproblem: <code>pysnmp 4.4.12</code> unterstützt vermutlich nicht alle Python-Versionen sauber. Lösung: <code>pysnmp-lextudio</code> wie in Phase 4.3.</p>
+<p><strong>Async-Carrier-Module-Wechsel:</strong> pysnmp 4.x nutzt <code>pysnmp.carrier.asyncore.dgram</code>. <code>asyncore</code> wurde in Python 3.12 entfernt. Bei Bump auf 3.12 zwingend <code>asyncio</code>-Carrier nutzen (<code>pysnmp.carrier.asyncio.dgram</code>) — minimaler Code-Patch.</p>
+<p><strong>Code-Touch:</strong> 2 Import-Zeilen + Engine-Init-Argumente in <code>app.py</code>.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>5.3 <code>paho-mqtt</code> 1.6.1 → 2.x (fac)</h3>
+  <span class="phase-summary">RISKY · API-Change</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">fac</td><td class="ver from">paho-mqtt==1.6.1</td><td class="ver to">paho-mqtt==2.1+</td><td><span class="badge risky">RISKY</span></td></tr>
+</tbody>
+</table>
+<p>paho 2.x ändert Callback-API (Optional <code>callback_api_version</code>). Code in fac nutzt nur <code>Client(client_id)</code> + <code>tls_set</code> + <code>connect</code> + <code>loop_start</code> + <code>publish</code>. Backward-compat-Pfad: <code>Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1, client_id=...)</code>.</p>
+<p><strong>Code-Touch:</strong> 1 Zeile (<code>Client(...)</code> Aufruf).</p>
+<p>Vorbild: Probe-Service nutzt paho 2.x mit CallbackAPI v2 — kann referenziert werden.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="phase-6">
+<h2>Phase 6 — Manager-Spezial (anyio/uvloop/aiopjlink)</h2>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>6.1 <code>anyio</code> 3.6.2 → 4.x (manager + calendar + knx)</h3>
+  <span class="phase-summary">RISKY · 3.x EOL</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Von</th><th>Auf</th><th>Risiko</th></tr></thead>
+<tbody>
+<tr><td class="svc">manager</td><td class="ver from">3.6.2</td><td class="ver to">4.7+</td><td><span class="badge risky">RISKY</span></td></tr>
+<tr><td class="svc">calendar</td><td class="ver from">3.6.2</td><td class="ver to">4.7+</td><td><span class="badge risky">RISKY</span></td></tr>
+<tr><td class="svc">knx</td><td class="ver from">3.6.2</td><td class="ver to">4.7+</td><td><span class="badge risky">RISKY</span></td></tr>
+</tbody>
+</table>
+<p><strong>anyio 4.x Breaking-Changes:</strong> <code>asynccontextmanager</code>-Semantik geändert, <code>create_task_group()</code> Exception-Propagation strenger (BaseExceptionGroup). Cross-Cut: aiomqtt 1.1.0 selbst pin't anyio 3.x — kann sein dass aiomqtt 1.x mit anyio 4.x bricht. Verifizieren vor Bump.</p>
+<p><strong>Alternative:</strong> aiomqtt selbst auf 2.x bumpen — anyio 4.x ist dann transitiv requirement. Dieses Paket-Paar zusammen migrieren.</p>
+<p><strong>Code-Touch:</strong> potenziell 0 Zeilen wenn aiomqtt selbst gebumpt wird (Phase blocked); ansonsten kompatibilitäts-test pflicht.</p>
+<div class="note caution"><strong>Empfehlung:</strong> diese Phase mit aiomqtt-Migration koppeln (Blocked-Track) statt isoliert bumpen.</div>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>6.2 <code>aiopjlink</code> — Commit-Pin</h3>
+  <span class="phase-summary">SAFE · Reproducibility</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Service</th><th>Aktion</th></tr></thead>
+<tbody>
+<tr><td class="svc">manager</td><td>Dockerfile-Zeile <code>git+https://github.com/worosom/aiopjlink</code> auf <code>git+https://github.com/worosom/aiopjlink@&lt;commit-sha&gt;</code> pinnen</td></tr>
+</tbody>
+</table>
+<p>Aktueller HEAD-SHA von dem Fork ermitteln (z.B. <code>git ls-remote</code>), in Dockerfile einpinnen.</p>
+<p><strong>Code-Touch:</strong> 0.</p>
+</div>
+</div>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>6.3 <code>PyWebOSTV</code> + <code>wsaccel</code> — Pinnen</h3>
+  <span class="phase-summary">SAFE · vorerst nur Pin</span>
+</div>
+<div class="phase-body">
+<table>
+<thead><tr><th>Package</th><th>Aktion</th></tr></thead>
+<tbody>
+<tr><td class="pkg">PyWebOSTV</td><td>Auf letzten stabilen Release pinnen (z.B. <code>0.9.0</code>)</td></tr>
+<tr><td class="pkg">wsaccel</td><td>Auf <code>0.6.7</code> (last release 2024) pinnen <em>oder</em> entfernen wenn nicht zwingend nötig (siehe Audit)</td></tr>
+</tbody>
+</table>
+<p><strong>Mittelfristig:</strong> Replacement-Plan für beide (wsaccel unmaintained, ws4py dead). Out-of-Scope für dep-only-Update.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="phase-7">
+<h2>Phase 7 — Probe (separates Repo)</h2>
+
+<div class="phase">
+<div class="phase-header">
+  <h3>7.1 Probe-Status</h3>
+  <span class="phase-summary">SKIP · bereits aktuell</span>
+</div>
+<div class="phase-body">
+<p>Probe-Repo (<code>mediensteuerung-probe</code>) ist als einziger Service auf uv-lock + paho-mqtt 2.1 + modernem psutil. Keine Update-Aktion in diesem Pfad nötig.</p>
+<p>Recent Commits <code>914b4aa</code> + <code>4abbf17</code> haben Wire-Kompatibilität mit Manager bereits wiederhergestellt.</p>
+<table>
+<thead><tr><th>Package</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td class="pkg">paho-mqtt</td><td class="ver to">2.1.0 ✓</td></tr>
+<tr><td class="pkg">psutil</td><td class="ver to">7.2.2 ✓</td></tr>
+<tr><td class="pkg">click</td><td class="ver to">8.3.3 ✓</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="blocked-section">
+<h2>Blocked — Separater Refactor-Track</h2>
+<p style="color: var(--text-muted);">Major-Migrations die <strong>nicht</strong> Teil dieses Dep-Only-Pfads sind. Brauchen Code-Refactor.</p>
+
+<table>
+<thead><tr><th>Service</th><th>Package</th><th>Von</th><th>Ziel</th><th>Code-Impact</th></tr></thead>
+<tbody>
+<tr>
+  <td class="svc">api</td>
+  <td class="pkg">pydantic</td><td class="ver from">1.10.7</td><td class="ver to">2.x</td>
+  <td>Alle <code>models/*.py</code>: <code>orm_mode</code> → <code>from_attributes</code>, <code>allow_population_by_field_name</code> → <code>populate_by_name</code>, <code>PyObjectId.__get_validators__</code> komplett rewrite, <code>Optional[X] = Field()</code> → <code>Optional[X] = None</code> in <em>jedem</em> Model. Plus fastapi-users muss mit-migriert werden.</td>
+</tr>
+<tr>
+  <td class="svc">api</td>
+  <td class="pkg">fastapi</td><td class="ver from">0.95.1</td><td class="ver to">0.110+</td>
+  <td><code>@app.on_event('startup')</code> → <code>lifespan</code>-Context; <code>Annotated[...]</code>-Patterns; Pydantic-v2-Dependency.</td>
+</tr>
+<tr>
+  <td class="svc">api</td>
+  <td class="pkg">fastapi-users[beanie]</td><td class="ver from">11.0.0</td><td class="ver to">13.x</td>
+  <td>Pydantic-v2 + neuer Auth-Manager-API. Schema-Klassen ändern (UserCreate/UserUpdate/UserRead).</td>
+</tr>
+<tr>
+  <td class="svc">api</td>
+  <td class="pkg">fastapi-mqtt</td><td class="ver from">1.0.7</td><td class="ver to">2.x</td>
+  <td>API-Change im Client-Wrapper.</td>
+</tr>
+<tr>
+  <td class="svc">api</td>
+  <td class="pkg">uvicorn</td><td class="ver from">0.22.0</td><td class="ver to">0.30+</td>
+  <td>SSL-Config-Optionen + lifespan-Hooks geändert. <em>Mit FastAPI-Migration koppeln.</em></td>
+</tr>
+<tr>
+  <td class="svc">api</td>
+  <td class="pkg">websockets</td><td class="ver from">11.0.3</td><td class="ver to">12.0+</td>
+  <td>API-Änderung in Server-Side-Klassen.</td>
+</tr>
+<tr>
+  <td class="svc">manager · calendar · knx</td>
+  <td class="pkg">aiomqtt</td><td class="ver from">1.1.0</td><td class="ver to">2.4.x</td>
+  <td><code>Client.messages</code> ist jetzt <code>AsyncGenerator</code> statt context-manager; Reconnect-Pattern muss von Hand gebaut werden (<code>MqttError</code> + retry-Loop). Identische Migration in 3 Services.</td>
+</tr>
+<tr>
+  <td class="svc">api</td>
+  <td class="pkg">pynetbox</td><td class="ver from">git-Fork</td><td class="ver to">upstream + Commit-Pin</td>
+  <td>Wechsel auf offizielles pynetbox-Release. API-Subtle-Differences. NetBox-Version-Compat prüfen.</td>
+</tr>
+</tbody>
+</table>
+
+<div class="note warning">
+<strong>Refactor-Track-Empfehlung:</strong> Pydantic v1→v2 + FastAPI 0.95→0.110+ + fastapi-users 11→13 + uvicorn 0.22→0.30 + websockets 11→12 sind eng gekoppelt — als <strong>ein einzelner Refactor-Sprint</strong> planen. Separat: aiomqtt 1→2 als zweiter Sprint (3 Services parallel migrieren).
+</div>
+</section>
+
+<!-- ============================================ -->
+<section id="workflow">
+<h2>Test/Rollback-Workflow</h2>
+
+<div class="phase">
+<div class="phase-body">
+<h4>Pro Phase-Step</h4>
+<ol class="steps">
+<li>Branch checkout, einzelnen Dockerfile/Compose-Change einpflegen.</li>
+<li><code>docker compose build --no-cache &lt;service&gt;</code> — auf Build-Errors prüfen.</li>
+<li><code>docker compose up -d &lt;service&gt;</code> — auf Container-Health prüfen (<em>achtung: Watchdog ist broken, manuell prüfen</em>).</li>
+<li>5-Test-Suite ausführen (siehe Phase 0).</li>
+<li>Bei Fehler: <code>git checkout HEAD~1 -- &lt;file&gt;</code> + Rebuild.</li>
+<li>Bei Erfolg: Commit mit Phase-Bezug (z.B. <code>chore(deps): bump requests to 2.32.4 (CVE-2024-35195) [phase 2.1]</code>).</li>
+</ol>
+
+<h4>Rollback-Reihenfolge (falls Phase-Block scheitert)</h4>
+<ol class="steps">
+<li>Service stoppen.</li>
+<li><code>git revert</code> der Phase-Commits.</li>
+<li>Image-Tag zurückrollen falls Container-Image betroffen.</li>
+<li>MongoDB: Snapshot zurückspielen <em>nur</em> wenn Major-Bump betroffen war.</li>
+<li>TLS-Material unverändert lassen — Stack ist mTLS-only, Cert-Wechsel wäre eigene Operation.</li>
+</ol>
+
+<h4>Empfohlene Sequenz (Calendar-Tage)</h4>
+<table>
+<thead><tr><th>Tag</th><th>Phase</th><th>Services</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>0 + 1</td><td>Snapshot, Dead-Code, Patch-Bumps</td></tr>
+<tr><td>2</td><td>2</td><td>CVE-Fixes (requests, aiohttp, uvloop)</td></tr>
+<tr><td>3</td><td>3.1 + 3.3</td><td>Mosquitto + mkcert</td></tr>
+<tr><td>4–5</td><td>3.2</td><td>MongoDB 6→6.latest→7 (mit Tests dazwischen)</td></tr>
+<tr><td>6</td><td>4</td><td>xknx, motor, pysnmp-lextudio</td></tr>
+<tr><td>7</td><td>5.2 + 5.3</td><td>fac-Service rebuild (Python 3.11 + paho 2.x + pysnmp-lextudio)</td></tr>
+<tr><td>8</td><td>5.1</td><td>3.11 → 3.12 für api/manager/calendar/knx (sequenziell)</td></tr>
+<tr><td>9</td><td>6.2 + 6.3</td><td>aiopjlink + PyWebOSTV pinnen</td></tr>
+<tr><td>—</td><td>6.1</td><td><em>nur</em> wenn aiomqtt-Migration im selben Sprint — sonst defer</td></tr>
+</tbody>
+</table>
+
+<h4>Output am Ende</h4>
+<p>Eine Reihe von kleinen Commits, jeder mit <code>chore(deps): ...</code>-Prefix und Phase-Bezug. Branch <code>updates/dependencies-only-2026-05</code> direkt mergebar (kein Refactor enthalten).</p>
+<p><strong>Erwartetes Ergebnis:</strong></p>
+<ul>
+  <li>9 Pakete mit aktiven CVEs gefixt</li>
+  <li>2 Dead-Dependencies entfernt</li>
+  <li>2 Container-Images aus EOL geholt (Mongo, Mosquitto-Patch)</li>
+  <li>1 EOL Python-Version entfernt (fac 3.7→3.11)</li>
+  <li>Reproducibility verbessert (alpine + mkcert + tls-gen + aiopjlink pinnen)</li>
+  <li><strong>Keine</strong> Major-Refactors angefangen</li>
+</ul>
+</div>
+</div>
+</section>
+
+<footer>
+  Update-Pfad — generiert aus <code>docs/review/REPORT.html</code> + Audit-Findings · <code>review/staged-audit-2026-05</code> · 2026-05-27
+</footer>
+
+</div>
+</body>
+</html>
