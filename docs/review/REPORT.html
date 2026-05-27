@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Mediensteuerung — Staged Audit Report</title>
+<style>
+:root {
+  --bg: #0f1419;
+  --panel: #1a1f2e;
+  --panel-soft: #232a3d;
+  --border: #2d3548;
+  --text: #d4dae5;
+  --text-muted: #8b94a8;
+  --text-dim: #6b7387;
+  --accent: #5fa8d3;
+  --crit: #ff5555;
+  --crit-bg: #3a1818;
+  --high: #ffaa44;
+  --high-bg: #3a2a18;
+  --med: #ffd866;
+  --med-bg: #3a3318;
+  --low: #88c0ff;
+  --good: #66dd99;
+  --code-bg: #0a0d14;
+  --hover: #2a3245;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  font-size: 14px;
+}
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 32px;
+}
+header {
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 24px;
+  margin-bottom: 32px;
+}
+h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  color: var(--text);
+  font-weight: 600;
+}
+.subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 4px 0;
+}
+.meta {
+  display: flex;
+  gap: 24px;
+  margin-top: 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.meta span { display: inline-block; }
+.meta strong { color: var(--text); font-weight: 500; }
+
+h2 {
+  font-size: 22px;
+  margin: 48px 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--accent);
+  font-weight: 600;
+}
+h3 {
+  font-size: 17px;
+  margin: 28px 0 12px 0;
+  color: var(--text);
+  font-weight: 600;
+}
+h4 {
+  font-size: 15px;
+  margin: 20px 0 10px 0;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.toc {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 32px;
+}
+.toc h3 { margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.toc ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 32px; }
+.toc li { padding: 4px 0; }
+.toc a { color: var(--accent); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 16px 0;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.summary-card {
+  background: var(--panel-soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+}
+.summary-card .label {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.summary-card .value {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: "SF Mono", Consolas, monospace;
+}
+.summary-card.crit .value { color: var(--crit); }
+.summary-card.high .value { color: var(--high); }
+.summary-card.med .value { color: var(--med); }
+.summary-card.total .value { color: var(--accent); }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 24px;
+  font-size: 13px;
+}
+th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--panel-soft);
+  border-bottom: 2px solid var(--border);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tr:hover { background: var(--hover); }
+td.id { font-family: "SF Mono", Consolas, monospace; color: var(--text-dim); white-space: nowrap; }
+td.loc { font-family: "SF Mono", Consolas, monospace; font-size: 12px; color: var(--accent); word-break: break-word; max-width: 240px; }
+td.severity { white-space: nowrap; }
+
+.sev {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.sev.crit { background: var(--crit-bg); color: var(--crit); border: 1px solid var(--crit); }
+.sev.high { background: var(--high-bg); color: var(--high); border: 1px solid var(--high); }
+.sev.med { background: var(--med-bg); color: var(--med); border: 1px solid var(--med); }
+
+code, .mono {
+  font-family: "SF Mono", Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.stage-section { margin-top: 56px; }
+.stage-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.stage-header h2 { margin: 0; border: none; padding: 0; }
+.stage-stats {
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.stage-stats .crit { color: var(--crit); }
+.stage-stats .high { color: var(--high); }
+.stage-stats .med { color: var(--med); }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  background: var(--panel-soft);
+  color: var(--text-muted);
+  margin-right: 4px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.note {
+  background: var(--panel-soft);
+  border-left: 3px solid var(--accent);
+  padding: 12px 16px;
+  margin: 12px 0;
+  border-radius: 0 6px 6px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.note strong { color: var(--text); }
+
+ul.pattern-list, ul.theme-list {
+  padding-left: 0;
+  list-style: none;
+}
+ul.pattern-list li, ul.theme-list li {
+  padding: 8px 12px 8px 36px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+ul.pattern-list li::before, ul.theme-list li::before {
+  content: counter(item);
+  counter-increment: item;
+  position: absolute;
+  left: 12px;
+  top: 8px;
+  font-family: "SF Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+ul.pattern-list, ul.theme-list { counter-reset: item; }
+
+footer {
+  margin-top: 64px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Mediensteuerung — Staged Audit Report</h1>
+  <p class="subtitle">Backend-Architektur, Infrastruktur, Submodule + Cross-Cutting Patterns</p>
+  <div class="meta">
+    <span>📅 Stand: <strong>2026-05-27</strong></span>
+    <span>🔍 Methode: <strong>caveman:cavecrew-reviewer (Opus 4.7)</strong></span>
+    <span>🌿 Branch: <code>review/staged-audit-2026-05</code></span>
+    <span>📂 Repo: <code>github.com/stiftung-humboldtforum/mediensteuerung</code></span>
+  </div>
+</header>
+
+<div class="note">
+  <strong>Filter-Hinweis.</strong> Cosmetic-Findings (Whitespace, Naming, Docstrings, Style) sind <em>entfernt</em>. LOW-Severity ist <em>entfernt</em>. MEDIUM nur, wenn Update-relevant oder echter Bug. Fokus: <strong>Dependency-Updates</strong>, <strong>echte Code-Bugs</strong>, <strong>Security-Lücken</strong>, <strong>Cross-Cutting-Patterns</strong>. Annahme: System läuft seit Jahren in Production — Core-Logic OK.
+</div>
+
+<div class="toc">
+  <h3>Inhalt</h3>
+  <ul>
+    <li><a href="#summary">Executive Summary</a></li>
+    <li><a href="#update-targets">Update-Targets (Priorität)</a></li>
+    <li><a href="#top-bugs">Top Code-Bugs (Cross-Stages)</a></li>
+    <li><a href="#themes">Cross-Cutting-Themes</a></li>
+    <li><a href="#stage-1">Stage 1 — Top-Level + Infra</a></li>
+    <li><a href="#stage-2a">Stage 2a — Broker</a></li>
+    <li><a href="#stage-2b">Stage 2b — DB</a></li>
+    <li><a href="#stage-2c">Stage 2c — mkcert/TLS</a></li>
+    <li><a href="#stage-2d">Stage 2d — API</a></li>
+    <li><a href="#stage-2e">Stage 2e — Manager</a></li>
+    <li><a href="#stage-2f">Stage 2f — Calendar</a></li>
+    <li><a href="#stage-2g">Stage 2g — FAC</a></li>
+    <li><a href="#stage-2h">Stage 2h — KNX</a></li>
+    <li><a href="#stage-3">Stage 3 — Cross-Cutting</a></li>
+  </ul>
+</div>
+
+<section id="summary">
+<h2>Executive Summary</h2>
+
+<div class="summary-grid">
+  <div class="summary-card crit"><div class="label">Critical</div><div class="value">83</div></div>
+  <div class="summary-card high"><div class="label">High</div><div class="value">170</div></div>
+  <div class="summary-card med"><div class="label">Medium (gefiltert)</div><div class="value">~50</div></div>
+  <div class="summary-card total"><div class="label">Echte Update-/Bug-Findings</div><div class="value">~303</div></div>
+</div>
+
+<div class="panel">
+<h4>Per-Stage Verteilung</h4>
+<table>
+<thead><tr><th>Stage</th><th>Scope</th><th>Critical</th><th>High</th><th>Medium</th><th>Total (vor Filter)</th></tr></thead>
+<tbody>
+<tr><td><a href="#stage-1">1</a></td><td>Top-Level + Infrastruktur</td><td>5</td><td>14</td><td>17</td><td>36</td></tr>
+<tr><td><a href="#stage-2a">2a</a></td><td>Mosquitto-Broker</td><td>1</td><td>3</td><td>6</td><td>14</td></tr>
+<tr><td><a href="#stage-2b">2b</a></td><td>MongoDB-Init</td><td>2</td><td>4</td><td>4</td><td>11</td></tr>
+<tr><td><a href="#stage-2c">2c</a></td><td>mkcert/TLS-Pipeline</td><td>9</td><td>14</td><td>7</td><td>31</td></tr>
+<tr><td><a href="#stage-2d">2d</a></td><td>API (FastAPI/WS)</td><td>8</td><td>31</td><td>17</td><td>56</td></tr>
+<tr><td><a href="#stage-2e">2e</a></td><td>Manager (MQTT-Hub)</td><td>21</td><td>40</td><td>12</td><td>73</td></tr>
+<tr><td><a href="#stage-2f">2f</a></td><td>Calendar-Service</td><td>12</td><td>20</td><td>10</td><td>42</td></tr>
+<tr><td><a href="#stage-2g">2g</a></td><td>FAC (SNMP-Bridge)</td><td>5</td><td>10</td><td>4</td><td>19</td></tr>
+<tr><td><a href="#stage-2h">2h</a></td><td>KNX-Bridge</td><td>3</td><td>17</td><td>11</td><td>31</td></tr>
+<tr><td><a href="#stage-3">3</a></td><td>Cross-Cutting Backend</td><td>17</td><td>17</td><td>3</td><td>37</td></tr>
+<tr style="font-weight: 600;"><td colspan="2">Total (vor Filter)</td><td>83</td><td>170</td><td>91</td><td>350</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="update-targets">
+<h2>Update-Targets (Priorität)</h2>
+
+<h3>Container-Images / Base-Versions</h3>
+<table>
+<thead><tr><th>Komponente</th><th>Aktuell</th><th>Empfehlung</th><th>Grund</th><th>Stage</th></tr></thead>
+<tbody>
+<tr><td>MongoDB</td><td><code>mongo:6.0.5</code></td><td><code>mongo:7.0</code> oder <code>8.0</code></td><td>6.0 EOL <strong>Juli 2025</strong>, 6.0.5 hat known CVEs</td><td>1, 2b</td></tr>
+<tr><td>Mosquitto</td><td><code>eclipse-mosquitto:2.0.18-openssl</code></td><td><code>2.0.20+-openssl</code></td><td>CVE-2024-3935 (heap exec), CVE-2023-28366 (memleak via SUBSCRIBE)</td><td>1</td></tr>
+<tr><td>Python (fac)</td><td><code>python:3.7.17-slim</code></td><td><code>python:3.12-slim</code></td><td><strong>EOL Juni 2023</strong> — 3 Jahre keine Security-Patches</td><td>1, 2g</td></tr>
+<tr><td>Python (alle anderen)</td><td><code>python:3.11-slim</code></td><td><code>python:3.12-slim</code> oder <code>3.13</code></td><td>3.11 trailing, Lifecycle-Update</td><td>2d, 2e, 2f, 2h</td></tr>
+<tr><td>mkcert Base</td><td><code>FROM alpine</code> (floating)</td><td><code>alpine:3.20</code> + Digest</td><td>Floating-Tag, non-reproducible Builds</td><td>2c</td></tr>
+<tr><td>mkcert Binary</td><td><code>v1.4.4</code> (2022)</td><td>latest + SHA256-Verify</td><td>Kein Signature-Verify, Supply-Chain</td><td>2c</td></tr>
+<tr><td>tls-gen</td><td>unpinned <code>git clone --depth=1</code></td><td>spezifischer Tag/Commit</td><td>Build silently broken bei Upstream-Change</td><td>2c</td></tr>
+</tbody>
+</table>
+
+<h3>Python-Dependencies (kritisch / CVE)</h3>
+<table>
+<thead><tr><th>Service</th><th>Package</th><th>Aktuell</th><th>Empfehlung</th><th>CVE / Issue</th></tr></thead>
+<tbody>
+<tr><td>api</td><td><code>fastapi</code></td><td>0.95.1</td><td>≥0.110</td><td><strong>CVE-2024-24762</strong> (ReDoS python-multipart)</td></tr>
+<tr><td>api</td><td><code>pydantic</code></td><td>1.10.7</td><td>1.10.latest oder v2</td><td>Regex-DoS-Klasse, v1 unmaintained</td></tr>
+<tr><td>api</td><td><code>uvicorn</code></td><td>0.22.0</td><td>≥0.30</td><td>h11 Desync/Header-Smuggling-Fixes</td></tr>
+<tr><td>api</td><td><code>websockets</code></td><td>11.0.3</td><td>≥12.0</td><td>CVE-2024-29940-Klasse</td></tr>
+<tr><td>manager</td><td><code>requests</code></td><td>2.30.0</td><td>≥2.32.4</td><td><strong>CVE-2024-35195</strong> (Session-Cert-Verify-Bypass)</td></tr>
+<tr><td>manager</td><td><code>aiohttp</code></td><td>3.8.5</td><td>≥3.10.11</td><td><strong>CVE-2024-23334</strong> (Path-Traversal), CVE-2024-30251 (DoS), CVE-2023-49081/49082 (HTTP-Smuggling), CVE-2024-52303/52304</td></tr>
+<tr><td>knx</td><td><code>requests</code></td><td>2.30.0</td><td>≥2.32.4</td><td>CVE-2024-35195 + CVE-2023-32681 (Proxy-Auth-Leak)</td></tr>
+<tr><td>api</td><td><code>fastapi-users[beanie]</code></td><td>11.0.0</td><td>13.x</td><td>Multiple Auth-Flow-Fixes; nutzt noch Pydantic v1</td></tr>
+<tr><td>api</td><td><code>fastapi-mqtt</code></td><td>1.0.7</td><td>2.x</td><td>Major behind</td></tr>
+<tr><td>api</td><td><code>pynetbox</code></td><td>git-Fork <code>devon-mar/openapi-3.5</code></td><td>upstream + Commit-Pin</td><td>Supply-Chain-Risk: unhashed git+https</td></tr>
+<tr><td>manager</td><td><code>aiopjlink</code></td><td>git unpinned</td><td>Commit-SHA</td><td>Supply-Chain</td></tr>
+<tr><td>manager</td><td><code>PyWebOSTV</code> + <code>wsaccel</code></td><td>unpinned + unmaintained</td><td>Pin + Replacement-Plan</td><td>wsaccel last release 2018, ws4py dead</td></tr>
+<tr><td>fac</td><td><code>pysnmp</code></td><td>4.4.12</td><td><code>pysnmp-lextudio</code> 6.x</td><td>Upstream unmaintained</td></tr>
+<tr><td>fac</td><td><code>paho-mqtt</code></td><td>1.6.1</td><td>2.1+</td><td>Major behind, paho 1.x Callback-API</td></tr>
+</tbody>
+</table>
+
+<h3>Python-Dependencies (Major behind, kein Critical-CVE)</h3>
+<table>
+<thead><tr><th>Service(s)</th><th>Package</th><th>Aktuell</th><th>Empfehlung</th><th>Grund</th></tr></thead>
+<tbody>
+<tr><td>manager, calendar, knx</td><td><code>aiomqtt</code></td><td>1.1.0</td><td>2.4.x</td><td>API komplett geändert, kein Auto-Reconnect in 1.x</td></tr>
+<tr><td>manager, calendar, knx</td><td><code>anyio</code></td><td>3.6.2</td><td>4.x</td><td>3.x EOL</td></tr>
+<tr><td>manager</td><td><code>uvloop</code></td><td>0.17.0</td><td>≥0.21.0</td><td>Segfault-Fixes</td></tr>
+<tr><td>calendar</td><td><code>motor</code></td><td>3.3.1</td><td>3.6.x oder PyMongo-async</td><td>Motor in maintenance, PyMongo 4.9+ hat native async</td></tr>
+<tr><td>calendar</td><td><code>python-dateutil</code></td><td>2.8.2</td><td>2.9.0</td><td>TZ-Fixes März 2024</td></tr>
+<tr><td>calendar</td><td><code>pytz</code></td><td>2023.3.post1</td><td>2024.x+ <em>oder</em> <code>zoneinfo</code> (stdlib)</td><td>TZ-DB outdated, DE DST/Legal-Time lag</td></tr>
+<tr><td>knx</td><td><code>xknx</code></td><td>2.11.2</td><td>3.x</td><td>KNX/IP-Secure-Fixes</td></tr>
+<tr><td>manager</td><td><code>pymodbus</code></td><td>3.5.4</td><td><strong>remove</strong></td><td>Installed aber kein Import — Dead Dep</td></tr>
+<tr><td>manager</td><td><code>asyncio-mqtt</code> (req.txt)</td><td>pinned</td><td><strong>delete</strong></td><td>Doppelt mit aiomqtt im Dockerfile</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="top-bugs">
+<h2>Top Code-Bugs (deduplicated across Stages)</h2>
+
+<p class="note">Hier nur <strong>echte Bugs</strong> (nicht Updates), nach Auswirkung sortiert. Diese sind unabhängig von Dep-Upgrades zu fixen.</p>
+
+<table>
+<thead><tr><th>#</th><th>Severity</th><th>Location</th><th>Bug</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><span class="sev crit">CRIT</span></td><td class="loc">maintenance/docker-watchdog/docker-watchdog.py:23</td><td><strong>Watchdog non-funktional.</strong> Bug iteriert dict-Keys (Container-IDs) statt Values, vergleicht Strings mit <code>'unhealthy'</code> → immer True → Watchdog restartet NIE. Defense-System komplett tot.</td></tr>
+<tr><td>2</td><td><span class="sev crit">CRIT</span></td><td class="loc">docker-compose.yml:35</td><td><strong>Broker-Healthcheck immer "healthy".</strong> Falsche Cert-Filenames (<code>CertAuth.crt</code> statt <code>ca_certificate.pem</code>) + invertierte Exit-Logik. <em>Broker effektiv unmonitored</em>.</td></tr>
+<tr><td>3</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/db + docker-compose.yml</td><td><strong>MongoDB-Auth NIE aktiviert.</strong> Falsche Env-Var-Names (Compose <code>MONGO_INITDB_USERNAME</code> statt <code>MONGO_INITDB_ROOT_USERNAME</code>) + <code>mongod --quiet</code> ohne <code>--auth</code>. DB offen für jeden host-reachable Client.</td></tr>
+<tr><td>4</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/mkcert/mkcerts.sh + bind-mounts</td><td><strong>Broker-CA-Private-Key in jedem Service-Container.</strong> tls-gen produziert <code>ca_key.pem</code> + <code>*.p12</code> (Private-Keys) in <code>/opt/tls</code>, mounted in alle 5 Services. Compromise eines = volle CA-Control.</td></tr>
+<tr><td>5</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/broker/mosquitto/config/mosquitto.conf</td><td><strong>Keine ACL.</strong> Jeder Cert-Inhaber kann <code>manager/&lt;any-fqdn&gt;/shutdown</code> direkt publishen. API-JWT/RBAC end-to-end moot.</td></tr>
+<tr><td>6</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/devices/computer.py:164</td><td><strong>Reboot komplett broken.</strong> <code>self.intervals['reboot_interval']</code> Key existiert nicht (gesetzt als <code>'reboot'</code>) → KeyError in jeder Reboot-Loop-Iteration.</td></tr>
+<tr><td>7</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/devices/snmp_gude.py:156</td><td><code>while not self.is_ready</code> — <code>is_ready</code> undefined → <code>Device.__getattr__</code> returnt truthy coroutine-factory → <strong>Ready-Gate bypassed</strong>. Write kann vor Init-Complete laufen.</td></tr>
+<tr><td>8</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/devices/pjlink.py:72</td><td><code>self._interface</code> nie in <code>__init__</code> assigned. Fällt durch <code>Device.__getattr__</code> → AttributeError bei jedem ersten Connect.</td></tr>
+<tr><td>9</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/misc/__init__.py:45</td><td><code>yaml.load(..., Loader=yaml.Loader)</code> — <strong>Deserialization-RCE</strong>.</td></tr>
+<tr><td>10</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/devices/brightsign.py:12-14</td><td><strong>Hardcoded Plaintext-Creds</strong> <code>'admin','avm'</code> für BrightSign-API.</td></tr>
+<tr><td>11</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/manager.py:80</td><td><strong>Rekursive <code>setup()</code> Deadlock</strong> — asyncio.Lock nicht re-entrant. Infinite recursion wenn API down.</td></tr>
+<tr><td>12</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/app.py:35-39 + calendar/app.py + knx/app.py</td><td><strong>Subscriptions nur einmal issued.</strong> aiomqtt 1.x Reconnect wiped Subs ohne Re-Issue → silent permanent message-loss. Pattern in allen 3 aiomqtt-Services identisch.</td></tr>
+<tr><td>13</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/devices/computer.py:166</td><td><strong>LWT-Bug (vom Probe-Audit bekannt):</strong> <code>on_connected(*_)</code> ignoriert Payload → Probe-LWT <code>connected=0</code> würde Device ONLINE setzen statt OFFLINE. (Probe deshalb LWT-frei.)</td></tr>
+<tr><td>14</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/calendar/event.py:67</td><td><strong>TZ-Bug across DST.</strong> <code>self.start.replace(tzinfo=now.tzinfo)</code> clobbert original-tz → Wall-clock vs absolute-Time-Bug, Events feuern um 1h verschoben in DST-Übergängen.</td></tr>
+<tr><td>15</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/calendar/calendar_service.py:63</td><td><code>message_queue.pop()</code> LIFO statt FIFO → <code>end</code> kann VOR <code>start</code> published werden.</td></tr>
+<tr><td>16</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/calendar/calendar_service.py:54</td><td><strong>Keine Restart-Idempotenz</strong> für <code>is_happening</code>. Currently-happening-Event feuert nach Restart erneut <code>start</code> → Duplicate.</td></tr>
+<tr><td>17</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/calendar/event.py:78</td><td>Hardcoded <code>if self.id == 72:</code> <strong>Debug-Log in Production</strong>.</td></tr>
+<tr><td>18</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/fac/app.py:11 + docker-compose.yml:159</td><td><strong>ENV-Mismatch.</strong> Compose passt <code>FAC_COMMUNITYSTRING</code>, App liest <code>COMMUNITYSTRING</code>. Container crashed bei jedem Start mit KeyError.</td></tr>
+<tr><td>19</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/fac/app.py:77</td><td><code>app.join()</code> daemon-Thread blockt forever → outer <code>while True</code> Reconnect-Loop <strong>unreachable</strong>. MQTT-Disconnects recovern nie.</td></tr>
+<tr><td>20</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/knx/knx.py:11 + docker-compose.yml:139-144</td><td><code>KNXKEYS_FILE_PATH</code> Env passt aber <strong>keine Bind-Mount</strong> → FileNotFoundError bei jedem Container-Start.</td></tr>
+<tr><td>21</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/knx/knx.py:67</td><td><code>self.switches[int(device.name)]</code> KeyError propagiert in xknx-Callback → <strong>killt Bus-Reader</strong>.</td></tr>
+<tr><td>22</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/api/app.py:23,26</td><td>CORS <code>allow_origins=['*']</code> + <code>allow_credentials=True</code> — Spec-Violation + Anti-Pattern. Browser ignorieren credentials bei Wildcard.</td></tr>
+<tr><td>23</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/api/routes/base.py:87,91</td><td><strong>WS-Auth-Bug:</strong> <code>manager.connect(websocket)</code> BEFORE Token-Validation. Plus Token via Query-String → landet in Proxy-Logs, Browser-History.</td></tr>
+<tr><td>24</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/api/misc/data.py:83</td><td><strong><code>nb.http_session.verify = False</code></strong> — TLS-Verify-OFF für NetBox-API → Credentials MITM-Risiko.</td></tr>
+<tr><td>25</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/devices/computer.py:50 + app.py:35-39</td><td><strong>Duplicate Subscriptions:</strong> <code>probe/#</code> global + <code>probe/&lt;fqdn&gt;/+</code> per Device → Broker liefert jede Message <strong>zweimal</strong> → Handler doppelt + doppelte Publishes.</td></tr>
+<tr><td>26</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/devices/tv.py:101-102</td><td><code>self.loop.create_task(...)</code> aus ws4py-IO-Thread — <strong>nicht thread-safe</strong> mit asyncio. <code>run_coroutine_threadsafe</code> nötig.</td></tr>
+<tr><td>27</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/mqtt_client.py:30-34</td><td>paho-Network-Thread mutiert <code>_message_queue</code> während async-Coroutines lesen — <strong>Race</strong>. Plus kein Resubscribe nach Reconnect.</td></tr>
+<tr><td>28</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/app.py:54</td><td><strong>MQTT-Topic-Injection:</strong> <code>getattr(device, f'on_{device_method}')</code> ohne Allow-List + Computer.__getattr__ writes <code>_state[name]</code> mit Angreifer-Input.</td></tr>
+<tr><td>29</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/app.py:91</td><td><strong>Topic-Injection 2:</strong> <code>getattr(manager, f'{type}_method')</code> erlaubt Routing zu beliebigen <code>*_method</code>-Attributen.</td></tr>
+<tr><td>30</td><td><span class="sev crit">CRIT</span></td><td class="loc">backend/manager/devices/mixins/error_mixin.py:30-33</td><td><strong>Stack-Trace + Secrets-Leak via MQTT.</strong> <code>traceback.extract_tb(tb)[-1]</code> + <code>e.args</code> published auf <code>manager/device_event</code> → alle Subscriber sehen Source-Code + Secrets.</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="themes">
+<h2>Cross-Cutting-Themes (Architektur)</h2>
+
+<ol class="theme-list">
+<li><strong>3× near-identische <code>mqtt_client.py</code></strong> mit divergent Bug-State. Keiner re-subscribed bei Reconnect. Manager hat broken Offline-Queue (Race). Calendar/KNX byte-identisch stripped Versionen. → <strong>Shared Lib mit Reconnect/Resubscribe</strong> nötig.</li>
+<li><strong>QoS-Asymmetrie:</strong> <code>api/*</code> qos=1, aber <code>manager/*</code>/<code>calendar/*</code> Events default qos=0 non-retained → Event-Loss bei transient drop.</li>
+<li><strong>Broker-ACL fehlt</strong> → API-JWT/RBAC end-to-end moot. Jeder authn'd Cert kann <code>manager/&lt;fqdn&gt;/&lt;cmd&gt;</code> spoofen.</li>
+<li><strong>Source-Bind-Mount</strong> auf allen 5 Services → Dockerfile-Pins <em>decorative</em>. Ein <code>git pull</code> swapped Prod ohne Rebuild.</li>
+<li><strong>Dependency-Drift</strong> auf shared libs (paho-mqtt 1.x/2.x, aiomqtt 1.x vs gmqtt vs paho-raw, anyio 3.6.2 pinned in 3 vs unpinned in API, Python 3.11 vs 3.7.17).</li>
+<li><strong>Implicit Topic-Schema</strong> — jeder Consumer string-splits Topics; Producer/Consumer-Mismatch bei <code>fac/*</code> (raw payload als Topic!) und event-payload-shape.</li>
+<li><strong>TLS-Material überall verteilt:</strong> <code>ca_key.pem</code> + <code>*.p12</code> in jeden Service bind-mounted obwohl von keinem referenziert.</li>
+<li><strong>5 Device-Control-Transports</strong> (MQTT/HTTP/SNMP/WebSocket/PJLink-TCP) bypassen MQTT-Control-Plane → kein zentral Audit/Auth/Retry.</li>
+<li><strong>Logging divergent:</strong> print vs logging DEBUG/INFO/ERROR — keine shared Observability.</li>
+<li><strong>Identity-Coupling</strong> <code>probe.getfqdn()</code> == <code>NetBox.primary_ip.dns_name</code> ohne Reconciliation → silent message-loss bei DNS-Drift.</li>
+<li><strong>Manager <code>privileged: true</code></strong> rein für ICMP-Raw-Socket — <code>cap_add: [NET_RAW]</code> würde reichen.</li>
+<li><strong>Reproducible Builds nur auf Probe</strong> (uv-lock); alle 5 Backend-Services inline RUN pip ohne Hashes.</li>
+<li><strong>Duplicate/overlapping MQTT-Subscriptions</strong> im Manager (<code>probe/#</code> global + <code>probe/&lt;fqdn&gt;/+</code> per Device) verdoppeln Event-Dispatch.</li>
+</ol>
+
+<div class="note">
+<strong>Meta-Pattern:</strong> 5 Service-übergreifende Probleme (QoS-Mismatch, Duplicate-Subs, ACL-Gap, Reconnect-Story, Topic-Schema-Mismatch) lassen vermuten dass <strong>die Service-Konstellation als Ganzes nie End-to-End mit Broker-Restart getestet wurde</strong>.
+</div>
+</section>
+
+<!-- STAGE 1 -->
+<section class="stage-section" id="stage-1">
+<div class="stage-header">
+<h2>Stage 1 — Top-Level + Infrastructure</h2>
+<div class="stage-stats"><span class="crit">5C</span> · <span class="high">14H</span> · <span class="med">17M</span></div>
+</div>
+
+<h4>Critical</h4>
+<table>
+<tr><th>ID</th><th>Location</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td class="loc">docker-watchdog.py:23</td><td>Bug iteriert dict-Keys statt Values → Watchdog restartet NIE. Defense-System tot.</td></tr>
+<tr><td class="id">C2</td><td class="loc">docker-watchdog.py:18</td><td><code>container.attrs</code> nie refreshed im Loop — State permanent stale.</td></tr>
+<tr><td class="id">C3</td><td class="loc">docker-watchdog.service:9</td><td>ExecStart <code>/usr/bin/docker-watchdog.py</code> aber install.sh kopiert nach <code>/usr/local/bin/</code> — Service startet nicht (ENOENT).</td></tr>
+<tr><td class="id">C4</td><td class="loc">docker-compose.yml:35</td><td>Broker-Healthcheck referenziert nicht-existierende Cert-Filenames → mosquitto_sub error → exit 0 → <strong>healthy regardless of broker state</strong>.</td></tr>
+<tr><td class="id">C5</td><td class="loc">docker-compose.yml:35</td><td>Healthcheck-Logik invertiert — stderr nicht im Pipe gecaptured, grep auf empty input exit 1 → <code>|| exit 0</code> → healthy bei Failure.</td></tr>
+</table>
+
+<h4>High</h4>
+<table>
+<tr><th>ID</th><th>Location</th><th>Problem</th></tr>
+<tr><td class="id">H1</td><td class="loc">docker-watchdog.py:17</td><td><code>containers.list()</code> default <code>all=False</code> → exited Container unsichtbar.</td></tr>
+<tr><td class="id">H2</td><td class="loc">docker-watchdog.py:28</td><td>Restartet ALLE Container wenn EIN unhealthy.</td></tr>
+<tr><td class="id">H3</td><td class="loc">docker-compose.yml:4</td><td><strong><code>mongo:6.0.5</code> EOL Juli 2025.</strong></td></tr>
+<tr><td class="id">H4</td><td class="loc">docker-compose.yml:24</td><td><strong>Mosquitto 2.0.18</strong> — CVE-2024-3935, CVE-2023-28366.</td></tr>
+<tr><td class="id">H5</td><td class="loc">docker-watchdog.service:10</td><td><code>WorkingDirectory=/home/alex/humboldt</code> hardcoded.</td></tr>
+<tr><td class="id">H6</td><td class="loc">docker-watchdog.service:12</td><td><code>RestartSec=600s</code> — 10 min silent nach Crash.</td></tr>
+<tr><td class="id">H7</td><td class="loc">docker-watchdog.py</td><td>Kein try/except — transient Docker-Error killt Prozess.</td></tr>
+<tr><td class="id">H8</td><td class="loc">docker-compose.yml:69</td><td>API-Healthcheck <code>curl --insecure</code> + 120s-Intervals → ~10 min unentdeckt.</td></tr>
+<tr><td class="id">H9</td><td class="loc">docker-compose.yml:14</td><td><code>network_mode: host</code> + ungenutztes Bridge-Network — Ports auf jedem Interface.</td></tr>
+<tr><td class="id">H10</td><td class="loc">docker-compose.yml:13</td><td>Mongo-Volume bind-mount unter Repo → <code>git clean</code> zerstört DB.</td></tr>
+<tr><td class="id">H11</td><td class="loc">docker-compose.yml:97</td><td><code>privileged: true</code> auf manager nur für ICMP-Raw-Socket.</td></tr>
+<tr><td class="id">H12</td><td class="loc">docker-compose.yml:55,61</td><td>Source-bind-mounts + <code>uvicorn --reload</code> → Dev-Mode in Prod.</td></tr>
+<tr><td class="id">H13</td><td class="loc">docker-compose.yml:23</td><td>Broker-Healthcheck ohne retries/start_period — bricht dependents auf cold-start.</td></tr>
+<tr><td class="id">H14</td><td class="loc">mkcert/mkcerts.sh:3</td><td>Cert ~398 Tage gültig, keine Renewal — silent fail nach ~13 Monaten.</td></tr>
+</table>
+
+<h4>Medium (update-relevant)</h4>
+<table>
+<tr><th>ID</th><th>Location</th><th>Problem</th></tr>
+<tr><td class="id">M1</td><td class="loc">install/env_setup.sh:6</td><td>Password-Gen via tr pipe-break — kürzere Passwords möglich.</td></tr>
+<tr><td class="id">M5</td><td class="loc">docker-compose.yml:18</td><td>Mongo-Healthcheck ohne Auth — bricht wenn Auth aktiviert wird.</td></tr>
+<tr><td class="id">M6</td><td class="loc">docker-compose.yml:7</td><td><code>MONGO_INITDB_USERNAME</code>/<code>PASSWORD</code> ist NICHT Standard-Var.</td></tr>
+<tr><td class="id">M7</td><td class="loc">docker-compose.yml:128</td><td>knx <code>KNXKEYS_FILE_PATH</code> ohne Bind-Mount → FileNotFound.</td></tr>
+<tr><td class="id">M12</td><td class="loc">docker-watchdog/install.sh:8</td><td><code>python3-sdnotify</code> kein Debian-Package — Install schlägt silent fehl.</td></tr>
+<tr><td class="id">M17</td><td class="loc">docker-compose.yml:153</td><td><code>fac</code>, <code>calendar</code>, <code>manager</code> ohne Healthcheck.</td></tr>
+</table>
+</section>
+
+<!-- STAGE 2a -->
+<section class="stage-section" id="stage-2a">
+<div class="stage-header">
+<h2>Stage 2a — Mosquitto-Broker</h2>
+<div class="stage-stats"><span class="crit">1C</span> · <span class="high">3H</span> · <span class="med">6M</span></div>
+</div>
+
+<h4>Critical</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td><strong>Keine ACL-Datei.</strong> Mit <code>use_identity_as_username true</code> + einer CA: jeder Client mit Cert kann ANY Topic publish/subscribe — inkl. <code>probe/&lt;other-fqdn&gt;/connected</code> spoofen oder Hijack von Command-Topics.</td></tr>
+</table>
+
+<h4>High</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">H1</td><td><strong>Keine Persistenz konfiguriert.</strong> Retained Messages verschwinden bei Broker-Restart.</td></tr>
+<tr><td class="id">H2</td><td><strong>Kein TLS-Version-Pin / keine Cipher-Policy.</strong> Defaults erlauben TLS 1.0/1.1 auf älteren Builds.</td></tr>
+<tr><td class="id">H3</td><td><code>max_inflight_messages 0</code> unlimited — slow Manager → Broker-Memory unbounded.</td></tr>
+</table>
+
+<h4>Medium (relevant)</h4>
+<table>
+<tr><td class="id">M2</td><td><code>upgrade_outgoing_qos true</code> upgraded Probe-QoS-0-Sensors → erhöht Broker-Memory + Bandwidth für fire-and-forget Streams.</td></tr>
+<tr><td class="id">M4</td><td>Kein <code>log_dest</code>/<code>log_type</code> — Audit-Trail verloren.</td></tr>
+<tr><td class="id">M6</td><td>Kein <code>allow_zero_length_clientid false</code> — Ghost-Sessions möglich.</td></tr>
+</table>
+</section>
+
+<!-- STAGE 2b -->
+<section class="stage-section" id="stage-2b">
+<div class="stage-header">
+<h2>Stage 2b — MongoDB</h2>
+<div class="stage-stats"><span class="crit">2C</span> · <span class="high">4H</span> · <span class="med">4M</span></div>
+</div>
+
+<h4>Critical</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td><strong>MongoDB-Auth NIE aktiviert.</strong> Compose nutzt Non-Standard-Env-Vars + <code>mongod --quiet</code> ohne <code>--auth</code>. DB offen für jeden host-reachable Client.</td></tr>
+<tr><td class="id">C2</td><td><strong>DB-Name-Mismatch.</strong> Init-Script grantet <code>readWrite</code> auf <code>MONGO_INITDB_DATABASE</code>; API connected zu <code>client['users']</code>, Calendar zu <code>client['calendar']</code>. Sobald Auth aktiviert wird → App tot.</td></tr>
+</table>
+
+<h4>High</h4>
+<table>
+<tr><td class="id">H1</td><td>Connection-String ohne <code>authSource=admin</code> — Init schreibt per-DB-User statt Cluster-User.</td></tr>
+<tr><td class="id">H2</td><td><strong>Keine Index-Bootstrap.</strong> fastapi-users braucht unique <code>users.email</code>. Cold-Start lahm, Duplikate möglich.</td></tr>
+<tr><td class="id">H3</td><td>Keine JSON-Schema-Validation auf Collections.</td></tr>
+<tr><td class="id">H4</td><td>Keine Backup-Strategie. Bind-Volume = nicht-Backup.</td></tr>
+</table>
+
+<h4>Medium (relevant)</h4>
+<table>
+<tr><td class="id">M3</td><td>Init-Script läuft <strong>nur bei frischem Volume</strong>. Re-Run gegen existing volume no-op — Future Role/Index/Schema-Changes silent fail.</td></tr>
+</table>
+</section>
+
+<!-- STAGE 2c -->
+<section class="stage-section" id="stage-2c">
+<div class="stage-header">
+<h2>Stage 2c — mkcert / TLS-Pipeline</h2>
+<div class="stage-stats"><span class="crit">9C</span> · <span class="high">14H</span> · <span class="med">7M</span></div>
+</div>
+
+<h4>Critical</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td><strong>tls-gen produziert <code>ca_key.pem</code> + <code>*.p12</code> in <code>/root/mqtt</code></strong> → bind-mounted in JEDEN Service-Container. Broker-CA-Signing-Key auf Disk jedes Containers.</td></tr>
+<tr><td class="id">C2</td><td>Bind-mount <code>./backend/mkcert/certs:/root</code> exposed mkcert-CAROOT inkl. <code>rootCA-key.pem</code> in Host-Repo.</td></tr>
+<tr><td class="id">C3</td><td><strong>Keine Cert-Rotation.</strong> mkcert ~825d, tls-gen CA 10y. Kein Renewal-Hook irgendwo.</td></tr>
+<tr><td class="id">C4</td><td><code>cp -r ./result /root/mqtt</code> nicht idempotent — Re-Run nested-stale.</td></tr>
+<tr><td class="id">C5</td><td><code>set -eu</code> fehlt — failing Steps swallowed.</td></tr>
+<tr><td class="id">C6</td><td>Broker-Healthcheck Filename-Mismatch (siehe Stage 1).</td></tr>
+<tr><td class="id">C7</td><td><code>FROM alpine</code> floating-Tag — non-reproducible.</td></tr>
+<tr><td class="id">C8</td><td>mkcert-Binary ohne Checksum-Verify.</td></tr>
+<tr><td class="id">C9</td><td><code>tls-gen</code> git-clone unpinned.</td></tr>
+</table>
+
+<h4>High</h4>
+<table>
+<tr><td class="id">H1</td><td><code>$API_HOSTNAME</code> nicht validiert — Filename-Collapse möglich.</td></tr>
+<tr><td class="id">H2</td><td>SAN-Liste hardcoded — Aliases fehlen.</td></tr>
+<tr><td class="id">H3</td><td>tls-gen baked CRL-URL <code>http://crl-server:8000</code> — kein Server existiert → strict-TLS-Clients failen.</td></tr>
+<tr><td class="id">H4</td><td><code>SERVER_ALT_NAME</code> nicht gesetzt → tls-gen fallback random Container-Hostname.</td></tr>
+<tr><td class="id">H7</td><td><code>setfacl u:1883:rx</code> UID hardcoded — Image-Wechsel killt Broker silent.</td></tr>
+<tr><td class="id">H13</td><td>Kein Rotation-Service in compose-certs.yml — Production silently expired.</td></tr>
+</table>
+</section>
+
+<!-- STAGE 2d -->
+<section class="stage-section" id="stage-2d">
+<div class="stage-header">
+<h2>Stage 2d — API (FastAPI / WebSocket)</h2>
+<div class="stage-stats"><span class="crit">8C</span> · <span class="high">31H</span> · <span class="med">17M</span></div>
+</div>
+
+<h4>Critical</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td><strong><code>fastapi==0.95.1</code></strong> — CVE-2024-24762 (ReDoS).</td></tr>
+<tr><td class="id">C2</td><td><strong><code>pydantic==1.10.7</code></strong> — Regex-DoS-Klasse, v1 unmaintained.</td></tr>
+<tr><td class="id">C3</td><td>CORS <code>allow_origins=['*']</code> + <code>allow_credentials=True</code> Anti-Pattern.</td></tr>
+<tr><td class="id">C4</td><td>JWT-Refresh ohne Revocation — gestohlener Token indefinitely refreshable.</td></tr>
+<tr><td class="id">C5</td><td><strong>WS-Auth:</strong> <code>manager.connect(websocket)</code> BEFORE Token-Validation. Plus close-code 1000 statt 1008.</td></tr>
+<tr><td class="id">C6</td><td><strong>WS-Token via Query-String</strong> — landet in Proxy-Logs, Browser-History.</td></tr>
+<tr><td class="id">C7</td><td><code>/config/</code> POST schreibt <code>Annotated[list, Body()]</code> ohne Schema-Validation via <code>yaml.dump</code>.</td></tr>
+<tr><td class="id">C8</td><td><strong><code>nb.http_session.verify = False</code></strong> — NetBox TLS-Verify-OFF.</td></tr>
+</table>
+
+<h4>High (Auswahl — alle 31 in <code>02d-api.md</code>)</h4>
+<table>
+<tr><td class="id">H1</td><td><code>uvicorn==0.22.0</code> — h11-Desync-Fixes in later.</td></tr>
+<tr><td class="id">H2</td><td><code>websockets==11.0.3</code> — CVE-2024-29940-Klasse.</td></tr>
+<tr><td class="id">H3</td><td><code>fastapi-users==11.0.0</code> — Auth-Flow-Fixes in 13.x.</td></tr>
+<tr><td class="id">H5</td><td>pynetbox community-Fork via git+https unhashed — Supply-Chain.</td></tr>
+<tr><td class="id">H10</td><td>MongoDB-URI ohne TLS — plaintext-Credentials.</td></tr>
+<tr><td class="id">H12</td><td>MQTTv311 hardcoded; <code>knx/#</code> wildcard zu breit (leakt non-switch-Topics an WS).</td></tr>
+<tr><td class="id">H14</td><td>Lock-handling in <code>misc/data.py</code> ohne try/finally — Deadlock-Risiko.</td></tr>
+<tr><td class="id">H21</td><td><code>method_name</code> untyped Raw-Path-Param in MQTT-Topic; <code>params: dict</code> Mass-Assignment.</td></tr>
+<tr><td class="id">H22</td><td>Long-lived WS — Token-Expiry nach Connect nie re-checked.</td></tr>
+<tr><td class="id">H27</td><td><code>BaseUserCreate</code>/<code>Update</code> exposed <code>is_superuser</code> — Self-Elevation-Risk auf <code>/users</code>.</td></tr>
+<tr><td class="id">H29</td><td><code>print(reset_token)</code> + <code>print(verification_token)</code> — Tokens in stdout.</td></tr>
+<tr><td class="id">H30</td><td><code>GET /users/</code> returnt voll User-Documents inkl. <code>hashed_password</code>.</td></tr>
+</table>
+
+<h4>Medium (Updates / migration)</h4>
+<table>
+<tr><td class="id">M3</td><td>Deprecated <code>@app.on_event('startup')</code> — lifespan context für FastAPI-Upgrade.</td></tr>
+<tr><td class="id">M9</td><td>Pydantic v1 <code>PyObjectId</code> + <code>orm_mode</code> + <code>allow_population_by_field_name</code> — v2-Migration-Debt.</td></tr>
+</table>
+</section>
+
+<!-- STAGE 2e -->
+<section class="stage-section" id="stage-2e">
+<div class="stage-header">
+<h2>Stage 2e — Manager (MQTT-Hub)</h2>
+<div class="stage-stats"><span class="crit">21C</span> · <span class="high">40H</span> · <span class="med">12M</span></div>
+</div>
+
+<div class="note"><strong>Größtes Submodul</strong> — viele bekannte Anti-Patterns + reale State-Machine-Bugs. Auswahl der wichtigsten Findings hier; volle Liste in <code>02e-manager.md</code>.</div>
+
+<h4>Critical (Auswahl)</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td><strong><code>requests==2.30.0</code></strong> — CVE-2024-35195.</td></tr>
+<tr><td class="id">C2</td><td><strong><code>aiohttp==3.8.5</code></strong> — Multiple CVEs (Path-Traversal, DoS, Smuggling).</td></tr>
+<tr><td class="id">C3</td><td><code>aiopjlink</code> git unpinned — Supply-Chain.</td></tr>
+<tr><td class="id">C4</td><td><code>PyWebOSTV</code> + <code>wsaccel</code> unpinned + unmaintained.</td></tr>
+<tr><td class="id">C5</td><td><code>requirements.txt</code> + Dockerfile widersprechen — <code>asyncio-mqtt</code> pinned vs <code>aiomqtt</code> installed.</td></tr>
+<tr><td class="id">C6</td><td><code>app.py:48</code> Topic-split ValueError killt Loop.</td></tr>
+<tr><td class="id">C7</td><td>Topic-Injection 1 — <code>getattr(device, f'on_{...}')</code>.</td></tr>
+<tr><td class="id">C8</td><td>Topic-Injection 2 — <code>getattr(manager, f'{type}_method')</code>.</td></tr>
+<tr><td class="id">C9</td><td><strong>Subscriptions issued einmalig</strong> — Reconnect verliert Subs.</td></tr>
+<tr><td class="id">C10</td><td><strong>Rekursive <code>setup()</code></strong> Deadlock auf Lock.</td></tr>
+<tr><td class="id">C11</td><td>MQTT-Client Cross-Thread-Race + kein Resubscribe.</td></tr>
+<tr><td class="id">C12</td><td><code>on_connected(*_)</code> ignoriert Payload — LWT-Bug.</td></tr>
+<tr><td class="id">C13</td><td><code>intervals['reboot_interval']</code> KeyError — Reboot broken.</td></tr>
+<tr><td class="id">C14</td><td>pjlink <code>_interface</code> nie initialized.</td></tr>
+<tr><td class="id">C15</td><td>snmp_gude <code>PDU_COMMUNITYSTRING</code> Module-Load KeyError.</td></tr>
+<tr><td class="id">C16</td><td>snmp_gude <code>is_ready</code> undefined → Gate bypassed.</td></tr>
+<tr><td class="id">C17</td><td>snmp_gude <code>lock.release()</code> ohne Held-Check.</td></tr>
+<tr><td class="id">C18</td><td>tv.py <code>loop.create_task</code> aus IO-Thread (nicht thread-safe).</td></tr>
+<tr><td class="id">C19</td><td><strong>brightsign hardcoded <code>admin:avm</code> Plaintext-Creds.</strong></td></tr>
+<tr><td class="id">C20</td><td><code>yaml.load(Loader=yaml.Loader)</code> — RCE.</td></tr>
+<tr><td class="id">C21</td><td><code>privileged: true</code> in compose — nur ICMP nötig.</td></tr>
+</table>
+
+<h4>High (Auswahl)</h4>
+<table>
+<tr><td class="id">H1</td><td><code>aiomqtt==1.1.0</code> — 2 Majors behind.</td></tr>
+<tr><td class="id">H2</td><td><code>anyio==3.6.2</code> EOL.</td></tr>
+<tr><td class="id">H3</td><td><code>uvloop==0.17.0</code> Segfault-Fixes in 0.19+.</td></tr>
+<tr><td class="id">H17</td><td>State-Keys silent erstellt — Attacker-controlled state injection via <code>__getattr__</code>.</td></tr>
+<tr><td class="id">H18</td><td>Probe-Subscribe unsubscribed bei offline, nie re-subscribed.</td></tr>
+<tr><td class="id">H22</td><td>WolAble Coroutine eagerly created + Cancel-Race.</td></tr>
+<tr><td class="id">H32</td><td><strong>Stack-Trace + Secrets via MQTT geleakt</strong> (<code>error_mixin.py</code>).</td></tr>
+<tr><td class="id">H35</td><td><code>locations.devices</code> Snapshot at Construction — stale after re-subscribe.</td></tr>
+</table>
+
+<h4>Medium (relevant)</h4>
+<table>
+<tr><td class="id">M2</td><td><code>pymodbus==3.5.4</code> dead dep — entfernen.</td></tr>
+<tr><td class="id">M11</td><td><code>shutil.copyfile('./config/base_config.yml')</code> aber File heißt <code>default_config.yml</code> → First-Start crash.</td></tr>
+</table>
+</section>
+
+<!-- STAGE 2f -->
+<section class="stage-section" id="stage-2f">
+<div class="stage-header">
+<h2>Stage 2f — Calendar</h2>
+<div class="stage-stats"><span class="crit">12C</span> · <span class="high">20H</span> · <span class="med">10M</span></div>
+</div>
+
+<h4>Critical</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td><code>aiomqtt==1.1.0</code> ohne Auto-Reconnect — Service tot bei Broker-Drop.</td></tr>
+<tr><td class="id">C2</td><td>Kein MqttError-Wrapper.</td></tr>
+<tr><td class="id">C3</td><td>Subscription nur einmal.</td></tr>
+<tr><td class="id">C4</td><td><code>message_queue</code> plain-list mit cross-callback-mutation.</td></tr>
+<tr><td class="id">C5</td><td><strong>Keine Restart-Idempotenz</strong> — Duplicate <code>start</code>-Events nach Restart.</td></tr>
+<tr><td class="id">C6</td><td><code>localizer.localize(datetime.now())</code> — Naive system-local-time → 1-2h-Off bei UTC-Container.</td></tr>
+<tr><td class="id">C7</td><td><strong><code>message_queue.pop()</code> LIFO</strong> — <code>end</code> kann VOR <code>start</code> publiziert werden.</td></tr>
+<tr><td class="id">C8</td><td>MongoDB-URL ohne TLS.</td></tr>
+<tr><td class="id">C9</td><td><code>parser.parse(start)</code> ohne try/except — malformed Date crashed <code>load_events()</code>.</td></tr>
+<tr><td class="id">C10</td><td><code>rrulestr</code> raises ValueError bei malformed — selber Crash-Path.</td></tr>
+<tr><td class="id">C11</td><td><code>self.start.replace(tzinfo=now.tzinfo)</code> — Wall-clock vs absolute-Time-Bug across DST.</td></tr>
+<tr><td class="id">C12</td><td><strong><code>if self.id == 72:</code> Debug-Log in Production.</strong></td></tr>
+</table>
+
+<h4>High (Auswahl)</h4>
+<table>
+<tr><td class="id">H3</td><td><code>motor==3.3.1</code> in maintenance — PyMongo 4.9+ hat native async.</td></tr>
+<tr><td class="id">H5</td><td>Subscribe ohne qos — Calendar publisht qos=1.</td></tr>
+<tr><td class="id">H17</td><td>Heuristik für midnight-Events fragil um DST-25h-Tage.</td></tr>
+<tr><td class="id">H19</td><td>Hardcoded <code>Europe/Berlin</code> + naive <code>datetime.now()</code>.</td></tr>
+<tr><td class="id">H20</td><td>Kein LWT — Manager kann tote Calendar nicht detect.</td></tr>
+</table>
+</section>
+
+<!-- STAGE 2g -->
+<section class="stage-section" id="stage-2g">
+<div class="stage-header">
+<h2>Stage 2g — FAC (SNMP-Trap-Bridge)</h2>
+<div class="stage-stats"><span class="crit">5C</span> · <span class="high">10H</span> · <span class="med">4M</span></div>
+</div>
+
+<h4>Critical</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td><strong>Python 3.7.17 EOL Juni 2023</strong> — 3 Jahre keine Security-Patches.</td></tr>
+<tr><td class="id">C2</td><td><strong>ENV-Mismatch:</strong> Compose passt <code>FAC_COMMUNITYSTRING</code>, App liest <code>COMMUNITYSTRING</code> → Container crashed bei jedem Start.</td></tr>
+<tr><td class="id">C3</td><td>UDP-Trap-Listener auf <code>0.0.0.0:8080</code> ohne Auth außer Community-String.</td></tr>
+<tr><td class="id">C4</td><td>Bare-Name <code>mqtt_client</code> in Method-Body (Module-Global-Leak).</td></tr>
+<tr><td class="id">C5</td><td><code>app.join()</code> blockt forever — Reconnect-Loop unreachable.</td></tr>
+</table>
+
+<h4>High (Auswahl)</h4>
+<table>
+<tr><td class="id">H1</td><td><code>pysnmp 4.4.12</code> unmaintained.</td></tr>
+<tr><td class="id">H3</td><td><code>print()</code> überall statt logging.</td></tr>
+<tr><td class="id">H10</td><td>Container als root.</td></tr>
+</table>
+
+<div class="note"><strong>Verdacht:</strong> Service läuft wahrscheinlich nicht (ENV-Mismatch crashed bei jedem Start) — entweder seit Compose-Rename tot oder SNMP-Traps gehen verloren ohne dass jemand merkt.</div>
+</section>
+
+<!-- STAGE 2h -->
+<section class="stage-section" id="stage-2h">
+<div class="stage-header">
+<h2>Stage 2h — KNX-Bridge</h2>
+<div class="stage-stats"><span class="crit">3C</span> · <span class="high">17H</span> · <span class="med">11M</span></div>
+</div>
+
+<h4>Critical</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">C1</td><td><code>KNXKEYS_FILE_PATH</code> Env passt aber <strong>kein Bind-Mount</strong> → FileNotFoundError bei Container-Start.</td></tr>
+<tr><td class="id">C2</td><td>TLS ohne <code>minimum_version=TLSv1_2</code>.</td></tr>
+<tr><td class="id">C3</td><td><code>self.switches[int(device.name)]</code> KeyError killt Bus-Reader.</td></tr>
+</table>
+
+<h4>High (Auswahl)</h4>
+<table>
+<tr><td class="id">H2</td><td><strong><code>requests==2.30.0</code></strong> — CVE-2024-35195 + CVE-2023-32681.</td></tr>
+<tr><td class="id">H3</td><td><code>aiomqtt==1.1.0</code> — Reconnect-Story broken.</td></tr>
+<tr><td class="id">H8</td><td><code>KNXKEYS_PASSWORD</code> plaintext via env.</td></tr>
+<tr><td class="id">H10</td><td><code>invert_knx_switch_group_addresses</code> Schema-Mismatch → wahrscheinlich silent-False für jeden Entry.</td></tr>
+<tr><td class="id">H14</td><td><code>knx/switch/&lt;id&gt;</code> non-retained — Manager-Restart blind.</td></tr>
+<tr><td class="id">H17</td><td><strong><code>test.py</code> Dev-Probe-Script shipped</strong> in Production-Container (<code>daemon_mode=True</code> blockt).</td></tr>
+</table>
+</section>
+
+<!-- STAGE 3 -->
+<section class="stage-section" id="stage-3">
+<div class="stage-header">
+<h2>Stage 3 — Cross-Cutting Backend</h2>
+<div class="stage-stats"><span class="crit">17C</span> · <span class="high">17H</span> · <span class="med">3M</span></div>
+</div>
+
+<div class="note">Diese Findings entstanden <strong>nur</strong> beim Vergleich der Services miteinander. Keine Wiederholung der Stage-2-Findings.</div>
+
+<h4>Critical (Cross-Service-Pattern)</h4>
+<table>
+<tr><th>ID</th><th>Problem</th></tr>
+<tr><td class="id">X1</td><td><strong>Dead Topic:</strong> Manager handelt <code>api/subscribe_devices</code> — kein Publisher.</td></tr>
+<tr><td class="id">X2</td><td>API publisht ohne await publish-ACK → silent Loss bei Broker-Drop mid-request.</td></tr>
+<tr><td class="id">X3</td><td><strong>QoS-Asymmetrie:</strong> <code>api/*</code> qos=1, <code>manager/*</code>/<code>knx/#</code> qos=0 → Events lost.</td></tr>
+<tr><td class="id">X4</td><td><strong>Subscriber-Side QoS-Downgrade</strong> Calendar publisht qos=1, Manager subscribe default qos=0.</td></tr>
+<tr><td class="id">X5</td><td>Manager-QoS-Mismatch: <code>api/#</code> qos=1, <code>probe/#</code> qos=0 → command-ACKs verloren.</td></tr>
+<tr><td class="id">X6</td><td><strong>Duplicate Subscriptions Manager:</strong> <code>probe/#</code> global + <code>probe/&lt;fqdn&gt;/+</code> per Device → 2× Handler-Dispatch.</td></tr>
+<tr><td class="id">X7</td><td><strong>3 near-identische <code>mqtt_client.py</code></strong> mit divergent Bug-State + keiner re-subscribed.</td></tr>
+<tr><td class="id">X8</td><td>paho-mqtt Drift: Manager Properties 1.x-Layout vs probe paho 2.x.</td></tr>
+<tr><td class="id">X9</td><td>Python-Version-Drift: 4× 3.11 + 1× 3.7.17 (fac, EOL).</td></tr>
+<tr><td class="id">X10</td><td><code>anyio==3.6.2</code> pinned in 3 Services; API gar nicht pinned → Drift.</td></tr>
+<tr><td class="id">X11</td><td><strong>3 MQTT-Libraries</strong> across 5 backend Services (aiomqtt 1.x + gmqtt + paho 1.6.1).</td></tr>
+<tr><td class="id">X12</td><td>TLS-Material: <code>ca_key.pem</code> in jeden Service obwohl keiner referenziert.</td></tr>
+<tr><td class="id">X13</td><td><strong>Auth-Flow-Gap End-to-End:</strong> ohne Broker-ACL ist API-JWT moot.</td></tr>
+<tr><td class="id">X14</td><td><strong>Kein RBAC.</strong> Jeder active User kann jedes Device wake/shutdown.</td></tr>
+<tr><td class="id">X15</td><td>Reconnect/Resubscribe in allen 3 aiomqtt-1.x Services identisch broken.</td></tr>
+<tr><td class="id">X16</td><td><strong>TZ-Inkonsistenz</strong> Cross-Service: 3 Services Host-TZ-Mount, 2 nicht; Calendar double-applied tz; manager ms-epoch; Mongo ISO-Strings.</td></tr>
+<tr><td class="id">X17</td><td><strong>Source-Bind-Mount</strong> auf allen 5 Services → Dockerfile-Pins decorative.</td></tr>
+</table>
+
+<h4>High (Cross-Service-Pattern Auswahl)</h4>
+<table>
+<tr><td class="id">Y2</td><td>Manager <code>requirements.txt</code> ist <strong>dead Documentation</strong> die <code>Dockerfile</code> widerspricht.</td></tr>
+<tr><td class="id">Y10</td><td><code>fac/{payload}</code> raw-SNMP-Content als Topic-Name vs Manager parser → Producer/Consumer-Mismatch.</td></tr>
+<tr><td class="id">Y14</td><td><strong>5 verschiedene Transport-Stacks</strong> (MQTT/HTTP/SNMP/WS/PJLink-TCP) im Manager — kein central control-plane.</td></tr>
+<tr><td class="id">Y15</td><td>Nur Probe hat reproducible Build (uv-lock); alle 5 Backend-Services inline RUN pip.</td></tr>
+<tr><td class="id">Y16</td><td>Identity-Coupling <code>getfqdn()</code> == NetBox-DNS ohne Reconciliation.</td></tr>
+<tr><td class="id">Y17</td><td>Kein Service hat non-root <code>USER</code>; RCE in any service = root on host.</td></tr>
+</table>
+</section>
+
+<footer>
+  Generiert aus <code>docs/review/01-top-level.md</code> .. <code>03-cross-cutting.md</code> · Branch <code>review/staged-audit-2026-05</code> · Filter: cosmetic + LOW entfernt
+</footer>
+
+</div>
+</body>
+</html>
