@@ -1,30 +1,30 @@
 [submodule "frontend"]
 	path = frontend
-	url = https://github.com/avorus-soft/avorus-ui.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-ui.git
 [submodule "backend/db"]
 	path = backend/db
-	url = https://github.com/avorus-soft/avorus-db.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-db.git
 [submodule "backend/broker"]
 	path = backend/broker
-	url = https://github.com/avorus-soft/avorus-broker.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-broker.git
 [submodule "backend/fac"]
 	path = backend/fac
-	url = https://github.com/avorus-soft/avorus-fac.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-fac.git
 [submodule "backend/knx"]
 	path = backend/knx
-	url = https://github.com/avorus-soft/avorus-knx.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-knx.git
 [submodule "backend/calendar"]
 	path = backend/calendar
-	url = https://github.com/avorus-soft/avorus-calendar.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-calendar.git
 [submodule "backend/manager"]
 	path = backend/manager
-	url = https://github.com/avorus-soft/avorus-manager.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-manager.git
 [submodule "backend/api"]
 	path = backend/api
-	url = https://github.com/avorus-soft/avorus-api.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-api.git
 [submodule "backend/mkcert"]
 	path = backend/mkcert
-	url = https://github.com/avorus-soft/avorus-mkcert.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-mkcert.git
 [submodule "maintenance/docker-watchdog"]
 	path = maintenance/docker-watchdog
-	url = https://github.com/avorus-soft/avorus-docker-watchdog.git
+	url = https://github.com/stiftung-humboldtforum/mediensteuerung-docker-watchdog.git
