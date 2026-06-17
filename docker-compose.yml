@@ -6,7 +6,11 @@ x-logging: &default-logging
 
 services:
   db:
-    image: mongo:6.0.28
+    # Mongo major upgrade is FCV-gated and one-major-at-a-time. 7.0 starts fine
+    # on existing FCV-6.0 data and the binary step stays reversible UNTIL the
+    # operator runs setFeatureCompatibilityVersion: "7.0". After that, bump to
+    # mongo:8.0 + setFCV "8.0". See NOTES.md "Mongo upgrade runbook".
+    image: mongo:7.0.37
     container_name: db
     logging: *default-logging
     environment:
