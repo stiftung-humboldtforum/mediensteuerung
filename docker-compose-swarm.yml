@@ -29,7 +29,7 @@ services:
         condition: on-failure
       endpoint_mode: dnsrr
   db:
-    image: mongo:6.0.5
+    image: mongo:6.0.28
     environment:
       - MONGO_INITDB_HOSTNAME=$MONGO_INITDB_HOSTNAME
       - MONGO_INITDB_DATABASE=$MONGO_INITDB_DATABASE
@@ -57,7 +57,7 @@ services:
         condition: on-failure
       endpoint_mode: dnsrr
   broker:
-    image: eclipse-mosquitto:2.0.18-openssl
+    image: eclipse-mosquitto:2.0.22-openssl
     volumes:
       - $PWD/backend/broker/mosquitto/config:/mosquitto/config
       - $PWD/backend/broker/tls:/opt/tls

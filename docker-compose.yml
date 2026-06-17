@@ -8,7 +8,7 @@ x-logging: &default-logging
 
 services:
   db:
-    image: mongo:6.0.5
+    image: mongo:6.0.28
     container_name: db
     logging: *default-logging
     environment:
@@ -31,7 +31,7 @@ services:
       retries: 50
       start_period: 30s
   broker:
-    image: eclipse-mosquitto:2.0.18-openssl
+    image: eclipse-mosquitto:2.0.22-openssl
     container_name: hufbroker
     logging: *default-logging
     volumes:
