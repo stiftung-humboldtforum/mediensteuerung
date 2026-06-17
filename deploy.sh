@@ -1,6 +1,9 @@
 #!/bin/bash
 
+# The current docker-compose.yml uses build:, network_mode: host and cap_add,
+# which `docker stack deploy` (Swarm) silently drops or rejects. The supported
+# path is plain Compose.
 set -a
 source .env
 set +a
-envsubst < docker-compose.yml | docker stack deploy -c - $STACKNAME
+docker compose up -d --build
