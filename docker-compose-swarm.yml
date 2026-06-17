@@ -14,6 +14,20 @@ services:
       restart_policy:
         condition: on-failure
       endpoint_mode: dnsrr
+  tls-gen:
+    image: tls-gen
+    volumes:
+      - $PWD/backend/tlsgen/generate.sh:/generate.sh
+      - $PWD/backend/broker/tls:/opt/tls-out
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    command: /bin/sh -c "/generate.sh $HOSTNAME"
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      endpoint_mode: dnsrr
   db:
     image: mongo:6.0.5
     environment:
@@ -56,7 +70,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          "mosquitto_sub -h localhost -p 8883 -t '#' --cafile /opt/tls/CertAuth.crt --cert /opt/tls/server.crt --key /opt/tls/server.key -E -i healthcheck | grep -v Error && exit 1 || exit 0",
+          "mosquitto_sub -h localhost -p 8883 -t '#' --cafile /opt/tls/ca_certificate.pem --cert /opt/tls/server_certificate.pem --key /opt/tls/server_key.pem -E -i healthcheck | grep -v Error && exit 1 || exit 0",
         ]
       interval: 10s
       timeout: 5s

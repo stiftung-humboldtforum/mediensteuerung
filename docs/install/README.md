@@ -70,7 +70,7 @@ Run the `install/ssl_setup.sh` script to generate both sets:
 ./install/ssl_setup.sh
 ```
 
-The generated files can be found in `backend/mkcert/certs`.
+The HTTPS certificates are written to `backend/mkcert/certs`, the MQTT broker/client certificates to `backend/broker/tls`.
 
 HTTPS certificates have a maximum lifetime of [398 days](https://stackoverflow.com/questions/62659149/why-was-398-days-chosen-for-tls-expiration).
 

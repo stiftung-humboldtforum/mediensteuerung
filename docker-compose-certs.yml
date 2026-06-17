@@ -10,3 +10,14 @@ services:
       - /etc/localtime:/etc/localtime:ro
     # MKCERT_EXTRA_SANS: standortspezifische SANs (interne FQDNs, IPs) aus .env
     command: mkcert $HOSTNAME ${HOSTNAME}.local $MKCERT_EXTRA_SANS 127.0.0.1 localhost
+  tls-gen:
+    image: tls-gen
+    build: ./backend/tlsgen
+    container_name: tls-gen
+    volumes:
+      - ./backend/broker/tls:/opt/tls-out
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    # $HOSTNAME (host name, interpolated by compose) becomes the certificate CN,
+    # matching the mkcert service above and the broker/client hostnames.
+    command: /generate.sh $HOSTNAME
