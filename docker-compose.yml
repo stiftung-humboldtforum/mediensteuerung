@@ -67,6 +67,8 @@ services:
       - ./backend/api:/api
       - ./backend/broker/tls:/opt/tls
       - ./backend/mkcert/certs:/opt/certs
+      # /config route (routes/config.py) reads+writes the manager config.yml
+      - ./backend/manager/config:/manager/config
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     network_mode: host
