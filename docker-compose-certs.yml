@@ -4,6 +4,12 @@ services:
     image: mkcert
     build: ./backend/mkcert
     container_name: mkcert
+    environment:
+      # Interpolated by compose from .env so mkcert.sh issues the leaf cert for
+      # the host FQDN + extra SANs, NOT the random container id (otherwise the
+      # api cert SAN is the container id and manager/knx TLS verification fails).
+      - HOSTNAME=$HOSTNAME
+      - MKCERT_EXTRA_SANS=$MKCERT_EXTRA_SANS
     volumes:
       - ./backend/mkcert/certs:/root
       - /etc/timezone:/etc/timezone:ro

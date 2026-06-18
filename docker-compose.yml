@@ -65,6 +65,9 @@ services:
       - API_SYSTEM_PASSWORD=$API_SYSTEM_PASSWORD
       - NETBOX_API_URL=$NETBOX_API_URL
       - NETBOX_API_TOKEN=$NETBOX_API_TOKEN
+      - NETBOX_CA_BUNDLE=$NETBOX_CA_BUNDLE
+      - CORS_ALLOW_ORIGINS=$CORS_ALLOW_ORIGINS
+      - JWT_LIFETIME_SECONDS=$JWT_LIFETIME_SECONDS
     volumes:
       - ./backend/api:/api
       - ./backend/broker/tls:/opt/tls
@@ -104,6 +107,8 @@ services:
       - API_SYSTEM_PASSWORD=$API_SYSTEM_PASSWORD
       - PJLINK_PASSWORD=$PJLINK_PASSWORD
       - PDU_COMMUNITYSTRING=$PDU_COMMUNITYSTRING
+      - BRIGHTSIGN_USERNAME=$BRIGHTSIGN_USERNAME
+      - BRIGHTSIGN_PASSWORD=$BRIGHTSIGN_PASSWORD
     volumes:
       - ./backend/manager:/app
       - ./backend/broker/tls:/opt/tls
