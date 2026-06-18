@@ -1,8 +1,18 @@
-version: '3.8'
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "5"
+
 services:
   db:
-    image: mongo:6.0.5
-    container_name: avorus-db
+    # Mongo major upgrade is FCV-gated and one-major-at-a-time. 7.0 starts fine
+    # on existing FCV-6.0 data and the binary step stays reversible UNTIL the
+    # operator runs setFeatureCompatibilityVersion: "7.0". After that, bump to
+    # mongo:8.0 + setFCV "8.0". See NOTES.md "Mongo upgrade runbook".
+    image: mongo:7.0.37
+    container_name: db
+    logging: *default-logging
     environment:
       - MONGO_INITDB_HOSTNAME=$MONGO_INITDB_HOSTNAME
       - MONGO_INITDB_DATABASE=$MONGO_INITDB_DATABASE
@@ -10,8 +20,10 @@ services:
       - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
     volumes:
       - ./backend/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
-      - ./backend/db/mongo-volume:/data/db
-    network_mode: host
+      - ./backend/db/humboldt-mongo-volume:/data/db
+    network_mode:
+      host
+      #    command: mongod --replSet rs0 --bind_ip_all
     command: mongod --quiet
     restart: always
     healthcheck:
@@ -21,25 +33,27 @@ services:
       retries: 50
       start_period: 30s
   broker:
-    image: eclipse-mosquitto:2.0.18-openssl
-    container_name: avorus-broker
+    image: eclipse-mosquitto:2.0.22-openssl
+    container_name: hufbroker
+    logging: *default-logging
     volumes:
       - ./backend/broker/mosquitto/config:/mosquitto/config
-      - ./backend/mkcert/certs/mqtt:/opt/tls
+      - ./backend/broker/tls:/opt/tls
     network_mode: host
     restart: always
     healthcheck:
       test:
         [
           'CMD-SHELL',
-          "mosquitto_sub -h localhost -p 8883 -t '#' --cafile /opt/tls/CertAuth.crt --cert /opt/tls/server.crt --key /opt/tls/server.key -E -i healthcheck | grep -v Error && exit 1 || exit 0",
+          "mosquitto_sub -h localhost -p 8883 -t '#' --cafile /opt/tls/ca_certificate.pem --cert /opt/tls/client_certificate.pem --key /opt/tls/client_key.pem -E -i healthcheck",
         ]
       interval: 10s
       timeout: 5s
   api:
-    image: avorus-api
+    image: hufapi
     build: ./backend/api
-    container_name: avorus-api
+    container_name: hufapi
+    logging: *default-logging
     environment:
       - MONGO_INITDB_USERNAME=$MONGO_INITDB_USERNAME
       - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
@@ -51,14 +65,19 @@ services:
       - API_SYSTEM_PASSWORD=$API_SYSTEM_PASSWORD
       - NETBOX_API_URL=$NETBOX_API_URL
       - NETBOX_API_TOKEN=$NETBOX_API_TOKEN
+      - NETBOX_CA_BUNDLE=$NETBOX_CA_BUNDLE
+      - CORS_ALLOW_ORIGINS=$CORS_ALLOW_ORIGINS
+      - JWT_LIFETIME_SECONDS=$JWT_LIFETIME_SECONDS
     volumes:
       - ./backend/api:/api
-      - ./backend/mkcert/certs/mqtt:/opt/tls
+      - ./backend/broker/tls:/opt/tls
       - ./backend/mkcert/certs:/opt/certs
+      # /config route (routes/config.py) reads+writes the manager config.yml
+      - ./backend/manager/config:/manager/config
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     network_mode: host
-    command: uvicorn app:app --reload --host 0.0.0.0 --port 80 --port 443 --ssl-keyfile /opt/certs/${API_HOSTNAME}+2-key.pem --ssl-certfile /opt/certs/${API_HOSTNAME}+2.pem
+    command: uvicorn app:app --host 0.0.0.0 --port 443 --ssl-keyfile /opt/certs/api-key.pem --ssl-certfile /opt/certs/api.pem
     restart: always
     depends_on:
       broker:
@@ -68,13 +87,14 @@ services:
     healthcheck:
       test: curl --fail --insecure https://localhost:443/healthcheck
       interval: 120s
-      timeout: 120s
+      timeout: 10s
       retries: 5
-      start_period: 5s
+      start_period: 30s
   manager:
     image: avorus-manager
     build: ./backend/manager
-    container_name: avorus-manager
+    container_name: hufmanager
+    logging: *default-logging
     environment:
       - MQTT_HOSTNAME=$MQTT_HOSTNAME
       - MONGO_INITDB_HOSTNAME=$MONGO_INITDB_HOSTNAME
@@ -82,19 +102,25 @@ services:
       - MONGO_INITDB_USERNAME=$MONGO_INITDB_USERNAME
       - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
       - API_HOSTNAME=$API_HOSTNAME
-      - API_ROOT_CA=/opt/rootCA.pem
+      - API_ROOT_CA=$API_ROOT_CA
       - API_SYSTEM_USERNAME=$API_SYSTEM_USERNAME
       - API_SYSTEM_PASSWORD=$API_SYSTEM_PASSWORD
       - PJLINK_PASSWORD=$PJLINK_PASSWORD
       - PDU_COMMUNITYSTRING=$PDU_COMMUNITYSTRING
+      - BRIGHTSIGN_USERNAME=$BRIGHTSIGN_USERNAME
+      - BRIGHTSIGN_PASSWORD=$BRIGHTSIGN_PASSWORD
     volumes:
       - ./backend/manager:/app
-      - ./backend/mkcert/certs/mqtt:/opt/tls
-      - ./backend/mkcert/certs/rootCA.pem:/opt/rootCA.pem
+      - ./backend/broker/tls:/opt/tls
+      - $API_ROOT_CA:$API_ROOT_CA
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     network_mode: host
-    privileged: true
+    # Only raw sockets are needed (icmplib privileged ping + WoL); grant just
+    # those capabilities instead of full privileged (= host root on host-net).
+    cap_add:
+      - NET_RAW
+      - NET_BROADCAST
     command: python3 /app/app.py
     restart: always
     depends_on:
@@ -102,10 +128,16 @@ services:
         condition: service_healthy
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import time; ten_minutes_ago = time.time() - 600; exit(float(open('/tmp/health').read().strip()) < ten_minutes_ago)\""]
+      interval: 1m
+      timeout: 10s
+      retries: 3
   calendar:
-    image: avorus-calendar
+    image: hufcalender
     build: ./backend/calendar
-    container_name: avorus-calendar
+    container_name: hufcalendar
+    logging: *default-logging
     environment:
       - MQTT_HOSTNAME=$MQTT_HOSTNAME
       - MONGO_INITDB_HOSTNAME=$MONGO_INITDB_HOSTNAME
@@ -114,7 +146,7 @@ services:
       - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
     volumes:
       - ./backend/calendar:/app
-      - ./backend/mkcert/certs/mqtt:/opt/tls
+      - ./backend/broker/tls:/opt/tls
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     network_mode: host
@@ -126,13 +158,14 @@ services:
       api:
         condition: service_healthy
   knx:
-    image: avorus-knx
+    image: hufknx
     build: ./backend/knx
-    container_name: avorus-knx
+    container_name: hufknx
+    logging: *default-logging
     environment:
       - MQTT_HOSTNAME=$MQTT_HOSTNAME
       - API_HOSTNAME=$API_HOSTNAME
-      - API_ROOT_CA=/opt/rootCA.pem
+      - API_ROOT_CA=$API_ROOT_CA
       - API_SYSTEM_USERNAME=$API_SYSTEM_USERNAME
       - API_SYSTEM_PASSWORD=$API_SYSTEM_PASSWORD
       - KNX_GATEWAY_IP=$KNX_GATEWAY_IP
@@ -140,8 +173,8 @@ services:
       - KNXKEYS_PASSWORD=$KNXKEYS_PASSWORD
     volumes:
       - ./backend/knx:/app
-      - ./backend/mkcert/certs/mqtt:/opt/tls
-      - ./backend/mkcert/certs/rootCA.pem:/opt/rootCA.pem
+      - ./backend/broker/tls:/opt/tls
+      - $API_ROOT_CA:$API_ROOT_CA
     network_mode: host
     command: python3 /app/app.py
     restart: always
@@ -151,15 +184,17 @@ services:
       api:
         condition: service_healthy
   fac:
-    image: avorus-fac
+    image: huffac
     build: ./backend/fac
-    container_name: avorus-fac
+    container_name: huffac
+    logging: *default-logging
     environment:
       - MQTT_HOSTNAME=$MQTT_HOSTNAME
-      - FAC_COMMUNITYSTRING=$FAC_COMMUNITYSTRING
+      # app.py liest os.environ['COMMUNITYSTRING']; Wert kommt aus .env
+      - COMMUNITYSTRING=$FAC_COMMUNITYSTRING
     volumes:
       - ./backend/fac:/app
-      - ./backend/mkcert/certs/mqtt:/opt/tls
+      - ./backend/broker/tls:/opt/tls
     network_mode: host
     command: python3 /app/app.py
     restart: always
@@ -168,6 +203,3 @@ services:
         condition: service_healthy
       api:
         condition: service_healthy
-networks:
-  pubsub:
-    driver: bridge
