@@ -8,8 +8,11 @@ services:
       - ./backend/mkcert/certs:/root
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-    # MKCERT_EXTRA_SANS: standortspezifische SANs (interne FQDNs, IPs) aus .env
-    command: mkcert $HOSTNAME ${HOSTNAME}.local $MKCERT_EXTRA_SANS 127.0.0.1 localhost
+    # MKCERT_EXTRA_SANS: standortspezifische SANs (interne FQDNs, IPs) aus .env.
+    # mkcert.sh runs the same mkcert invocation AND creates the stable
+    # api.pem/api-key.pem symlinks the api TLS command expects (the raw `mkcert`
+    # command alone only emits the brittle ${HOSTNAME}+N.pem leaf names).
+    command: /mkcert.sh
   tls-gen:
     image: tls-gen
     build: ./backend/tlsgen
