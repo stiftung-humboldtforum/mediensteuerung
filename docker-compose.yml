@@ -45,7 +45,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          "mosquitto_sub -h localhost -p 8883 -t '#' --cafile /opt/tls/ca_certificate.pem --cert /opt/tls/server_certificate.pem --key /opt/tls/server_key.pem -E -i healthcheck",
+          "mosquitto_sub -h localhost -p 8883 -t '#' --cafile /opt/tls/ca_certificate.pem --cert /opt/tls/client_certificate.pem --key /opt/tls/client_key.pem -E -i healthcheck",
         ]
       interval: 10s
       timeout: 5s
