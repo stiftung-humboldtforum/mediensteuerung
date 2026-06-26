@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 # rabbitmq/tls-gen needs git (to fetch itself), make, openssl and python3.
 RUN apt-get update \
