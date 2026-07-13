@@ -1,0 +1,5 @@
+asyncclick==8.3.0.7
+aiomqtt==2.5.1
+paho-mqtt==2.1.0
+pymongo==4.17.0
+tzdata==2026.2

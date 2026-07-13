@@ -157,6 +157,42 @@ services:
         condition: service_healthy
       api:
         condition: service_healthy
+  scheduler:
+    image: hufscheduler
+    build: ./backend/scheduler
+    container_name: hufscheduler
+    logging: *default-logging
+    environment:
+      - MQTT_HOSTNAME=$MQTT_HOSTNAME
+      - MONGO_INITDB_HOSTNAME=$MONGO_INITDB_HOSTNAME
+      - MONGO_INITDB_DATABASE=$MONGO_INITDB_DATABASE
+      - MONGO_INITDB_USERNAME=$MONGO_INITDB_USERNAME
+      - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
+      - SCHEDULE_TZ=${SCHEDULE_TZ:-Europe/Berlin}
+    volumes:
+      - ./backend/scheduler:/app
+      - ./backend/broker/tls:/opt/tls
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    network_mode: host
+    command: python3 /app/app.py
+    restart: always
+    healthcheck:
+      # tick() touches the file only while a plan is loaded and publishing
+      # succeeds — stale file = scheduler alive but not doing its job.
+      test: sh -c 'test $$(( $$(date +%s) - $$(stat -c %Y /tmp/scheduler-health 2>/dev/null || echo 0) )) -lt 180'
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    # Prototype (KALENDER-REDESIGN.md P1): opt-in via `--profile scheduler`,
+    # not part of the default stack yet.
+    profiles: [scheduler]
+    depends_on:
+      broker:
+        condition: service_healthy
+      api:
+        condition: service_healthy
   knx:
     image: hufknx
     build: ./backend/knx
