@@ -60,4 +60,10 @@ sed -i "s|# PJLINK_PASSWORD=|PJLINK_PASSWORD=${pjlink_password}|g" .env
 sed -i "s|# PDU_COMMUNITYSTRING=|PDU_COMMUNITYSTRING=$(generate_random_string)|g" .env
 sed -i "s|# FAC_COMMUNITYSTRING=|FAC_COMMUNITYSTRING=$(generate_random_string)|g" .env
 
+# HOSTNAME (cert CN / compose ${HOSTNAME} interpolation) and API_ROOT_CA (mkcert
+# rootCA path bind-mounted into manager/knx) have no safe default — write
+# concrete values so the stack doesn't fail on an empty mount / cert mismatch.
+sed -i "s|# HOSTNAME=|HOSTNAME=${fqdn}|g" .env
+sed -i "s|# API_ROOT_CA=|API_ROOT_CA=$(pwd)/backend/mkcert/certs/.local/share/mkcert/rootCA.pem|g" .env
+
 echo ".env file has been created."
