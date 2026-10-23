@@ -9,9 +9,10 @@ services:
     # Mongo major upgrade is FCV-gated and one-major-at-a-time. 8.0 starts only on
     # data with FCV 7.0: check db.adminCommand({getParameter: 1,
     # featureCompatibilityVersion: 1}) BEFORE switching the image (FCV 6.0 data:
-    # first mongo:7.0.45 + setFCV "7.0"). Back up the volume. Going back to
-    # mongo:7.0.45 works UNTIL setFeatureCompatibilityVersion: "8.0" (confirm:
-    # true) is run; that last step is not reversible. See NOTES.md "Mongo upgrade runbook".
+    # first mongo:7.0.45 + setFCV "7.0"). Back up the volume before each step:
+    # MongoDB Community Edition supports no binary downgrade from 7.0 on, the way
+    # back is a restore of that backup. setFeatureCompatibilityVersion "8.0"
+    # (confirm: true) is not reversible either. See NOTES.md "Mongo upgrade runbook".
     image: mongo:8.0.34
     container_name: db
     logging: *default-logging
