@@ -1,8 +1,16 @@
 version: '3.8'
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "5"
+
 services:
   db:
     image: mongo:6.0.5
-    container_name: avorus-db
+    container_name: db
+    logging: *default-logging
     environment:
       - MONGO_INITDB_HOSTNAME=$MONGO_INITDB_HOSTNAME
       - MONGO_INITDB_DATABASE=$MONGO_INITDB_DATABASE
@@ -10,8 +18,10 @@ services:
       - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
     volumes:
       - ./backend/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
-      - ./backend/db/mongo-volume:/data/db
-    network_mode: host
+      - ./backend/db/humboldt-mongo-volume:/data/db
+    network_mode:
+      host
+      #    command: mongod --replSet rs0 --bind_ip_all
     command: mongod --quiet
     restart: always
     healthcheck:
@@ -22,24 +32,26 @@ services:
       start_period: 30s
   broker:
     image: eclipse-mosquitto:2.0.18-openssl
-    container_name: avorus-broker
+    container_name: hufbroker
+    logging: *default-logging
     volumes:
       - ./backend/broker/mosquitto/config:/mosquitto/config
-      - ./backend/mkcert/certs/mqtt:/opt/tls
+      - ./backend/broker/tls:/opt/tls
     network_mode: host
     restart: always
     healthcheck:
       test:
         [
           'CMD-SHELL',
-          "mosquitto_sub -h localhost -p 8883 -t '#' --cafile /opt/tls/CertAuth.crt --cert /opt/tls/server.crt --key /opt/tls/server.key -E -i healthcheck | grep -v Error && exit 1 || exit 0",
+          "mosquitto_sub -h localhost -p 8883 -t '#' --cafile /opt/tls/ca_certificate.pem --cert /opt/tls/server_certificate.pem --key /opt/tls/server_key.pem -E -i healthcheck | grep -v Error && exit 1 || exit 0",
         ]
       interval: 10s
       timeout: 5s
   api:
-    image: avorus-api
+    image: hufapi
     build: ./backend/api
-    container_name: avorus-api
+    container_name: hufapi
+    logging: *default-logging
     environment:
       - MONGO_INITDB_USERNAME=$MONGO_INITDB_USERNAME
       - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
@@ -53,12 +65,14 @@ services:
       - NETBOX_API_TOKEN=$NETBOX_API_TOKEN
     volumes:
       - ./backend/api:/api
-      - ./backend/mkcert/certs/mqtt:/opt/tls
+      - ./backend/broker/tls:/opt/tls
       - ./backend/mkcert/certs:/opt/certs
+      # /config route (routes/config.py) reads+writes the manager config.yml
+      - ./backend/manager/config:/manager/config
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     network_mode: host
-    command: uvicorn app:app --reload --host 0.0.0.0 --port 80 --port 443 --ssl-keyfile /opt/certs/${API_HOSTNAME}+2-key.pem --ssl-certfile /opt/certs/${API_HOSTNAME}+2.pem
+    command: uvicorn app:app --reload --host 0.0.0.0 --port 80 --port 443 --ssl-keyfile /opt/certs/${HOSTNAME}+5-key.pem --ssl-certfile /opt/certs/${HOSTNAME}+5.pem
     restart: always
     depends_on:
       broker:
@@ -74,7 +88,8 @@ services:
   manager:
     image: avorus-manager
     build: ./backend/manager
-    container_name: avorus-manager
+    container_name: hufmanager
+    logging: *default-logging
     environment:
       - MQTT_HOSTNAME=$MQTT_HOSTNAME
       - MONGO_INITDB_HOSTNAME=$MONGO_INITDB_HOSTNAME
@@ -82,15 +97,15 @@ services:
       - MONGO_INITDB_USERNAME=$MONGO_INITDB_USERNAME
       - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
       - API_HOSTNAME=$API_HOSTNAME
-      - API_ROOT_CA=/opt/rootCA.pem
+      - API_ROOT_CA=$API_ROOT_CA
       - API_SYSTEM_USERNAME=$API_SYSTEM_USERNAME
       - API_SYSTEM_PASSWORD=$API_SYSTEM_PASSWORD
       - PJLINK_PASSWORD=$PJLINK_PASSWORD
       - PDU_COMMUNITYSTRING=$PDU_COMMUNITYSTRING
     volumes:
       - ./backend/manager:/app
-      - ./backend/mkcert/certs/mqtt:/opt/tls
-      - ./backend/mkcert/certs/rootCA.pem:/opt/rootCA.pem
+      - ./backend/broker/tls:/opt/tls
+      - $API_ROOT_CA:$API_ROOT_CA
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     network_mode: host
@@ -102,10 +117,16 @@ services:
         condition: service_healthy
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import time; ten_minutes_ago = time.time() - 600; exit(float(open('/tmp/health').read().strip()) < ten_minutes_ago)\""]
+      interval: 1m
+      timeout: 10s
+      retries: 3
   calendar:
-    image: avorus-calendar
+    image: hufcalender
     build: ./backend/calendar
-    container_name: avorus-calendar
+    container_name: hufcalendar
+    logging: *default-logging
     environment:
       - MQTT_HOSTNAME=$MQTT_HOSTNAME
       - MONGO_INITDB_HOSTNAME=$MONGO_INITDB_HOSTNAME
@@ -114,7 +135,7 @@ services:
       - MONGO_INITDB_PASSWORD=$MONGO_INITDB_PASSWORD
     volumes:
       - ./backend/calendar:/app
-      - ./backend/mkcert/certs/mqtt:/opt/tls
+      - ./backend/broker/tls:/opt/tls
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     network_mode: host
@@ -126,13 +147,14 @@ services:
       api:
         condition: service_healthy
   knx:
-    image: avorus-knx
+    image: hufknx
     build: ./backend/knx
-    container_name: avorus-knx
+    container_name: hufknx
+    logging: *default-logging
     environment:
       - MQTT_HOSTNAME=$MQTT_HOSTNAME
       - API_HOSTNAME=$API_HOSTNAME
-      - API_ROOT_CA=/opt/rootCA.pem
+      - API_ROOT_CA=$API_ROOT_CA
       - API_SYSTEM_USERNAME=$API_SYSTEM_USERNAME
       - API_SYSTEM_PASSWORD=$API_SYSTEM_PASSWORD
       - KNX_GATEWAY_IP=$KNX_GATEWAY_IP
@@ -140,8 +162,8 @@ services:
       - KNXKEYS_PASSWORD=$KNXKEYS_PASSWORD
     volumes:
       - ./backend/knx:/app
-      - ./backend/mkcert/certs/mqtt:/opt/tls
-      - ./backend/mkcert/certs/rootCA.pem:/opt/rootCA.pem
+      - ./backend/broker/tls:/opt/tls
+      - $API_ROOT_CA:$API_ROOT_CA
     network_mode: host
     command: python3 /app/app.py
     restart: always
@@ -151,15 +173,17 @@ services:
       api:
         condition: service_healthy
   fac:
-    image: avorus-fac
+    image: huffac
     build: ./backend/fac
-    container_name: avorus-fac
+    container_name: huffac
+    logging: *default-logging
     environment:
       - MQTT_HOSTNAME=$MQTT_HOSTNAME
-      - FAC_COMMUNITYSTRING=$FAC_COMMUNITYSTRING
+      # app.py liest os.environ['COMMUNITYSTRING']; Wert kommt aus .env
+      - COMMUNITYSTRING=$FAC_COMMUNITYSTRING
     volumes:
       - ./backend/fac:/app
-      - ./backend/mkcert/certs/mqtt:/opt/tls
+      - ./backend/broker/tls:/opt/tls
     network_mode: host
     command: python3 /app/app.py
     restart: always
