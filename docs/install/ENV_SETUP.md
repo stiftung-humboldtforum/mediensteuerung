@@ -12,13 +12,14 @@ A bash script to guide you though the setup of the required variables is provide
 
 This bash script will:
 
-1. Generate random strings for internal passwords and the FastAPI Users JWT secret.
-2. Get the fully qualified domain name (FQDN) of the system running the script.
-3. Prompt the user for the NetBox URL, username, password.
-4. Provision the API token from NetBox.
-5. Create a .env file from .env.example.
-6. Replace the placeholders in the .env file with the actual values, including the generated random strings and FQDN.
-7. Alert the user if the NetBox API token can't be provisioned, or confirm that the .env file has been created successfully.
+1. Stop without changes if a `.env` already exists (regenerating would replace all internal secrets; move the file away to create a new one).
+2. Generate random strings for internal passwords and the FastAPI Users JWT secret.
+3. Get the fully qualified domain name (FQDN) of the system running the script.
+4. Prompt the user for the NetBox URL, username, password, the KNX and PJLink settings and the SNMP communities of the PDUs and of the fire alarm panel (both required; see [fire-alarm-center-setup.md](../fire-alarm-center-setup.md)).
+5. Provision the API token from NetBox.
+6. Create a .env file from .env.example.
+7. Replace the placeholders in the .env file with the actual values, including the generated random strings and FQDN. Values are written in single quotes, so special characters arrive unchanged; a value must not contain a single quote.
+8. Alert the user if the NetBox API token can't be provisioned, or confirm that the .env file has been created successfully.
 
 Before running this script, make sure you have the required packages installed:
 
@@ -48,6 +49,8 @@ Enter KNX Gateway IP: 1.2.3.4
 Enter path to knxkeys file (exported from ETS): /opt/knxkeys.knxkeys
 Enter knxkeys password: ****
 Enter PJLink password: ****
+Enter the SNMP community of the PDUs: ****
+Enter the SNMP community configured in the fire alarm panel (BMZ): ****
 NetBox Token provisioned successfully.
 .env file has been created.
 ```

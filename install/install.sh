@@ -1,19 +1,21 @@
 #!/bin/bash
 
-# Define the expected Git repository URL
-REPO_URL="https://github.com/avorus-soft/avorus"
+# Repository and branch to install: the HF superproject with its submodules.
+# REPO_BRANCH can be overridden (after the merge to main: main).
+REPO_URL="https://github.com/stiftung-humboldtforum/mediensteuerung"
+REPO_BRANCH="${REPO_BRANCH:-update/2026-10}"
 
-# Check whether .git/config exists and contains the expected URL
-if [ -d ".git" ] && grep -q "$REPO_URL" .git/config; then
-  inside_avorus_repo=true
+# Inside a checkout of the superproject (its files, not its remote URL), install
+# there; otherwise clone it first.
+if [ -f docker-compose.yml ] && [ -d install ] && [ -d backend ]; then
+  inside_repo=true
 else
-  inside_avorus_repo=false
+  inside_repo=false
 fi
 
-
-if [ "$inside_avorus_repo" = false ]; then
-  git clone -j8 --recurse-submodules https://github.com/avorus-soft/avorus
-  cd avorus || exit
+if [ "$inside_repo" = false ]; then
+  git clone -j8 --recurse-submodules -b "$REPO_BRANCH" "$REPO_URL"
+  cd mediensteuerung || exit
 fi
 
 scripts=("./install/env_setup.sh" "./install/ssl_setup.sh" "./install/docker_build.sh" "./install/setup_user.sh" "./install/frontend_setup.sh")

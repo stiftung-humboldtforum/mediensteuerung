@@ -10,6 +10,18 @@ CN="${1:-${HOSTNAME:-$(hostname)}}"
 OUT="/opt/tls-out"
 mkdir -p "$OUT"
 
+# Keep existing material: a new CA would lock out every probe in the field that
+# trusts the old one. Regenerate only on purpose with TLSGEN_FORCE=1.
+complete=1
+for f in ca_certificate.pem server_certificate.pem server_key.pem \
+         client_certificate.pem client_key.pem; do
+  [ -s "$OUT/$f" ] || complete=0
+done
+if [ "$complete" = 1 ] && [ "${TLSGEN_FORCE:-0}" != 1 ]; then
+  echo "tls-gen: $OUT already holds a complete set, kept (TLSGEN_FORCE=1 to regenerate)"
+  exit 0
+fi
+
 cd /tls-gen/basic
 
 # Generate a fresh CA plus server and client key pairs (tls-gen names the leaf

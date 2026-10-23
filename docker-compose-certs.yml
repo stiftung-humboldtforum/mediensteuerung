@@ -27,6 +27,10 @@ services:
       - ./backend/broker/tls:/opt/tls-out
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+    # Existing certificates are kept; TLSGEN_FORCE=1 regenerates them (new CA:
+    # every probe must then get the new ca_certificate.pem).
+    environment:
+      - TLSGEN_FORCE=${TLSGEN_FORCE:-0}
     # $HOSTNAME (host name, interpolated by compose) becomes the certificate CN,
     # matching the mkcert service above and the broker/client hostnames.
     command: /generate.sh $HOSTNAME

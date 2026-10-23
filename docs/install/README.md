@@ -14,7 +14,7 @@ Run this snippet and follow the prompts that appear on screen:
 > If you are using a Debian-like distribution, install these by running:<br>`sudo apt update && sudo apt install git jq`
 
 ```bash
-curl -sOL https://raw.githubusercontent.com/avorus-soft/avorus/refs/heads/main/install/install.sh
+curl -sOL https://raw.githubusercontent.com/stiftung-humboldtforum/mediensteuerung/refs/heads/update/2026-10/install/install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -32,8 +32,8 @@ Go to https://hostname and log in with the credentials of your admin account.
 ### 1. Clone repository including submodules
 
 ```bash
-git clone -j8 --recurse-submodules https://github.com/avorus-soft/avorus
-cd avorus
+git clone -j8 --recurse-submodules -b update/2026-10 https://github.com/stiftung-humboldtforum/mediensteuerung
+cd mediensteuerung
 ```
 
 ### 2. [Set up environment variables](ENV_SETUP.md)
@@ -77,6 +77,8 @@ HTTPS certificates have a maximum lifetime of [398 days](https://stackoverflow.c
 The MQTT certificates have no predetermined maximum validity period.
 
 Using the provided script will generate certificates with a validity of ~10 years.
+
+Running it again keeps a complete set of MQTT certificates in `backend/broker/tls`; set `TLSGEN_FORCE=1` to issue new ones (a new CA, so every probe needs the new CA and client certificate).
 
 The script uses [FiloSottile/mkcert](https://github.com/FiloSottile/mkcert) and [rabbitmq/tls-gen](https://github.com/rabbitmq/tls-gen). Please refer to these repositories for further information.
 

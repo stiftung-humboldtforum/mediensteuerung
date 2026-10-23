@@ -1,4 +1,4 @@
-FROM debian:trixie-slim
+FROM debian:13.7-slim
 
 # rabbitmq/tls-gen needs git (to fetch itself), make, openssl and python3.
 RUN apt-get update \
