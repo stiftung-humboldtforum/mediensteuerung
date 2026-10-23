@@ -6,7 +6,7 @@ For installation details, refer to the [Installation Guide](docs/install/README.
 
 ## Additional Documentation
 
-For setting up individual components such as NetBox and probes, see the respective sections within the [docs/](docs) directory.
+For the fire alarm center integration, see [docs/fire-alarm-center-setup.md](docs/fire-alarm-center-setup.md); environment variables are described in [docs/install/ENV_SETUP.md](docs/install/ENV_SETUP.md).
 
 ## Introduction
 
